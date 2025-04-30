@@ -17,7 +17,7 @@ const Terms = () => {
         <h1 className="text-3xl font-bold mb-6 text-charity-primary">Terms and Conditions (T&amp;C)</h1>
         <h2 className="text-xl font-semibold mt-6 mb-2">Introduction</h2>
         <p className="mb-4">
-          These Terms and Conditions govern your use of [App Name], our platform that connects food donors with charities and shelters. By using the app or website, you agree to these terms.
+          These Terms and Conditions govern your use of Giving Hand LLC, our platform that connects food donors with charities and shelters. By using the app or website, you agree to these terms.
         </p>
         <h2 className="text-xl font-semibold mt-6 mb-2">User Responsibilities</h2>
         <ul className="list-disc pl-6 mb-4">
@@ -33,7 +33,7 @@ const Terms = () => {
         </ul>
         <h2 className="text-xl font-semibold mt-6 mb-2">Intellectual Property</h2>
         <p className="mb-4">
-          All logos, branding, and features are owned by [App Name]. Copying or reuse without permission is prohibited.
+          All logos, branding, and features are owned by Giving Hand LLC. Copying or reuse without permission is prohibited.
         </p>
         <h2 className="text-xl font-semibold mt-6 mb-2">Account Termination</h2>
         <p className="mb-4">
