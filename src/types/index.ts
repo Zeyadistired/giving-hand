@@ -10,7 +10,7 @@ export interface FoodTicket {
   id: string;
   organizationId: string;
   organizationName: string;
-  foodType: string;
+  foodType: string; // This can be 'expiry' or any other food type
   category: FoodCategory;
   weight: number;
   pieces?: number;

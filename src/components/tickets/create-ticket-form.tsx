@@ -35,7 +35,7 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
   const [expiryDate, setExpiryDate] = useState("");
   const [pickupLocation, setPickupLocation] = useState("");
   const [notes, setNotes] = useState("");
-  const [deliveryCapability, setDeliveryCapability] = useState<OrgDeliveryCapability>("none");
+  const [deliveryOption, setDeliveryOption] = useState<string>('');
   const [preferredPickupFrom, setPreferredPickupFrom] = useState("");
   const [preferredPickupTo, setPreferredPickupTo] = useState("");
 
@@ -53,6 +53,10 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
     ) {
       return;
     }
+
+    console.log("Form submission - deliveryOption:", deliveryOption);
+    const deliveryCapability = (deliveryOption === 'factory' ? "factory-only" : (deliveryOption || "none")) as OrgDeliveryCapability;
+    console.log("Calculated deliveryCapability:", deliveryCapability);
 
     onSubmit({
       foodType,
@@ -246,10 +250,9 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
             <input
               type="radio"
               name="delivery-capability"
-              value="factory-only"
-              checked={deliveryCapability === "factory-only"}
-              onChange={() => setDeliveryCapability("factory-only")}
-              required
+              value="factory"
+              checked={deliveryOption === 'factory'}
+              onChange={(e) => setDeliveryOption(e.target.value)}
             />
             <span>Send to Factory (Expired Food Only)</span>
           </label>
@@ -258,8 +261,8 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
               type="radio"
               name="delivery-capability"
               value="self-delivery"
-              checked={deliveryCapability === "self-delivery"}
-              onChange={() => setDeliveryCapability("self-delivery")}
+              checked={deliveryOption === 'self-delivery'}
+              onChange={(e) => setDeliveryOption(e.target.value)}
             />
             <span>Yes, we deliver ourselves</span>
           </label>
@@ -268,8 +271,8 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
               type="radio"
               name="delivery-capability"
               value="accepts-requests"
-              checked={deliveryCapability === "accepts-requests"}
-              onChange={() => setDeliveryCapability("accepts-requests")}
+              checked={deliveryOption === 'accepts-requests'}
+              onChange={(e) => setDeliveryOption(e.target.value)}
             />
             <span>Yes, we accept delivery requests from charities</span>
           </label>
@@ -278,13 +281,13 @@ export function CreateTicketForm({ organizationName, onSubmit }: CreateTicketFor
               type="radio"
               name="delivery-capability"
               value="none"
-              checked={deliveryCapability === "none"}
-              onChange={() => setDeliveryCapability("none")}
+              checked={deliveryOption === 'none'}
+              onChange={(e) => setDeliveryOption(e.target.value)}
             />
             <span>No delivery – charity must pick up</span>
           </label>
         </div>
-        {deliveryCapability === "factory-only" && (
+        {deliveryOption === 'factory' && (
           <div className="mt-2 text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
             Note: This option is for expired food only. The food will be sent to a processing factory.
           </div>
