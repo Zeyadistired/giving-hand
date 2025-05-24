@@ -7,6 +7,7 @@ import { FoodTicket, DeliveryMethod } from "@/types";
 import { getUserSession } from "@/utils/auth";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getFoodTicketsEnhanced, updateFoodTicket } from "@/utils/tickets";
 
 export default function FactoryTicketDetail() {
   const { ticketId } = useParams();
@@ -18,106 +19,101 @@ export default function FactoryTicketDetail() {
   });
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("self-pickup");
   const [showDeliverySelect, setShowDeliverySelect] = useState(false);
-  
+
   useEffect(() => {
-    const currentUser = getUserSession();
-    if (currentUser) {
-      setFactory({
-        name: currentUser.name,
-        id: currentUser.id
-      });
-    }
-    
-    if (!ticketId) {
-      navigate("/factory");
-      return;
-    }
-    
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const foundTicket = loadedTickets.find((t: FoodTicket) => t.id === ticketId);
-    
-    if (!foundTicket) {
-      navigate("/factory");
-      return;
-    }
-    
-    setTicket(foundTicket);
+    const loadData = async () => {
+      const currentUser = getUserSession();
+      if (currentUser) {
+        setFactory({
+          name: currentUser.name,
+          id: currentUser.id
+        });
+      }
+
+      if (!ticketId) {
+        navigate("/factory");
+        return;
+      }
+
+      try {
+        const allTickets = await getFoodTicketsEnhanced();
+        const foundTicket = allTickets.find((t: FoodTicket) => t.id === ticketId);
+
+        if (!foundTicket) {
+          toast.error("Ticket not found");
+          navigate("/factory");
+          return;
+        }
+
+        setTicket(foundTicket);
+      } catch (error) {
+        console.error("Error loading ticket:", error);
+        toast.error("Failed to load ticket");
+        navigate("/factory");
+      }
+    };
+
+    loadData();
   }, [ticketId, navigate]);
-  
+
   const handleAccept = () => {
     if (!ticket) return;
     setShowDeliverySelect(true);
   };
-  
-  const handleConfirmAccept = () => {
+
+  const handleConfirmAccept = async () => {
     if (!ticket) return;
-    
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "accepted",
-          factoryId: factory.id,
-          factoryName: factory.name,
-          deliveryMethod: deliveryMethod
-        };
-      }
-      return t;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    const updatedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-    setTicket(updatedTicket);
-    setShowDeliverySelect(false);
-    
-    toast.success("Request accepted successfully");
+
+    try {
+      const updatedTicket = await updateFoodTicket(ticketId!, {
+        status: "accepted",
+        factoryId: factory.id,
+        factoryName: factory.name,
+        deliveryMethod: deliveryMethod
+      });
+
+      setTicket(updatedTicket);
+      setShowDeliverySelect(false);
+      toast.success("Request accepted successfully");
+    } catch (error) {
+      console.error("Error accepting ticket:", error);
+      toast.error("Failed to accept request. Please try again.");
+    }
   };
-  
-  const handleReject = () => {
+
+  const handleReject = async () => {
     if (!ticket) return;
-    
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "declined",
-          conversionStatus: "rejected"
-        };
-      }
-      return t;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    toast.info("Request rejected");
-    navigate("/factory");
+
+    try {
+      await updateFoodTicket(ticketId!, {
+        status: "declined",
+        conversionStatus: "rejected"
+      });
+
+      toast.info("Request rejected");
+      navigate("/factory");
+    } catch (error) {
+      console.error("Error rejecting ticket:", error);
+      toast.error("Failed to reject request. Please try again.");
+    }
   };
-  
-  const handleMarkConverted = () => {
+
+  const handleMarkConverted = async () => {
     if (!ticket) return;
-    
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          conversionStatus: "converted"
-        };
-      }
-      return t;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    const updatedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-    setTicket(updatedTicket);
-    
-    toast.success("Food marked as converted successfully");
+
+    try {
+      const updatedTicket = await updateFoodTicket(ticketId!, {
+        conversionStatus: "converted"
+      });
+
+      setTicket(updatedTicket);
+      toast.success("Food marked as converted successfully");
+    } catch (error) {
+      console.error("Error marking as converted:", error);
+      toast.error("Failed to mark as converted. Please try again.");
+    }
   };
-  
+
   if (!ticket) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -125,7 +121,7 @@ export default function FactoryTicketDetail() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-10 bg-white border-b">
@@ -146,13 +142,13 @@ export default function FactoryTicketDetail() {
         <div className="bg-green-50 border border-green-200 rounded-md mb-6 p-4">
           <p className="text-green-800 font-medium">Status: {ticket.conversionStatus === "converted" ? "Converted" : ticket.status === "accepted" ? "Accepted" : "Pending"}</p>
         </div>
-        
+
         <div className="space-y-5">
           <div>
             <h2 className="text-xl font-semibold text-charity-primary">{ticket.foodType}</h2>
             <p className="text-sm text-muted-foreground">Category: {ticket.category}</p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Organization</p>
@@ -163,7 +159,7 @@ export default function FactoryTicketDetail() {
               <p className="font-medium">{ticket.weight} kg {ticket.pieces ? `(${ticket.pieces} pieces)` : ""}</p>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Expiry Date</p>
@@ -174,7 +170,7 @@ export default function FactoryTicketDetail() {
               <p className="font-medium">{new Date(ticket.createdAt).toLocaleDateString()}</p>
             </div>
           </div>
-          
+
           {ticket.notes && (
             <div>
               <p className="text-sm text-muted-foreground">Notes</p>
@@ -182,7 +178,7 @@ export default function FactoryTicketDetail() {
             </div>
           )}
         </div>
-        
+
         <div className="mt-8 flex flex-col gap-3">
           {showDeliverySelect ? (
             <div className="space-y-4">
@@ -209,15 +205,15 @@ export default function FactoryTicketDetail() {
             <>
               {ticket?.status !== "accepted" && ticket?.conversionStatus !== "converted" && (
                 <>
-                  <Button 
+                  <Button
                     onClick={handleAccept}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Check className="h-4 w-4 mr-2" /> Accept Request
                   </Button>
-                  
-                  <Button 
-                    variant="outline" 
+
+                  <Button
+                    variant="outline"
                     onClick={handleReject}
                     className="border-red-300 hover:bg-red-50 text-red-600"
                   >
@@ -227,16 +223,16 @@ export default function FactoryTicketDetail() {
               )}
             </>
           )}
-          
+
           {ticket.status === "accepted" && ticket.conversionStatus !== "converted" && (
-            <Button 
+            <Button
               onClick={handleMarkConverted}
               className="bg-charity-accent hover:bg-charity-dark text-white"
             >
               <Recycle className="h-4 w-4 mr-2" /> Mark as Converted
             </Button>
           )}
-          
+
           {ticket.conversionStatus === "converted" && (
             <div className="bg-green-100 border border-green-300 rounded-md p-4 text-center">
               <Recycle className="h-6 w-6 mx-auto mb-2 text-green-600" />

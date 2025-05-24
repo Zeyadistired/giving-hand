@@ -148,14 +148,14 @@ export default function OrganizationHome() {
   const handleAcceptDeliveryRequest = async (requestId: string) => {
     try {
       const updatedRequest = await updateDeliveryRequest(requestId, 'accepted');
-      
+
       // Update local state
-      setDeliveryRequests(prev => 
-        prev.map(req => 
+      setDeliveryRequests(prev =>
+        prev.map(req =>
           req.id === requestId ? { ...req, status: 'accepted' } : req
         )
       );
-      
+
       toast.success(`Delivery request accepted!`);
     } catch (error) {
       console.error('Error accepting request:', error);
@@ -166,12 +166,12 @@ export default function OrganizationHome() {
   const handleRejectDeliveryRequest = async (requestId: string) => {
     try {
       const updatedRequest = await updateDeliveryRequest(requestId, 'rejected');
-      
+
       // Update local state
-      setDeliveryRequests(prev => 
+      setDeliveryRequests(prev =>
         prev.filter(req => req.id !== requestId)
       );
-      
+
       toast.error(`Delivery request rejected.`);
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -253,7 +253,7 @@ export default function OrganizationHome() {
             <TabsTrigger value="donationHistory">Donation History</TabsTrigger>
             <TabsTrigger value="charitiesShelters">Charities/Shelters</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="guidelines" className="space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -281,7 +281,7 @@ export default function OrganizationHome() {
               </div>
             </motion.div>
           </TabsContent>
-          
+
           <TabsContent value="deliveryRequests" className="space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -291,47 +291,20 @@ export default function OrganizationHome() {
               <h2 className="text-xl font-semibold mb-3 text-emerald-600 text-center">
                 Delivery Requests
               </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {deliveryRequests.map((request) => (
-                  <Card key={request.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium text-emerald-600">{request.charityName}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Request Date: {request.requestDate}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Delivery Fee: ${request.fee}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAcceptDeliveryRequest(request.id)}
-                            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRejectDeliveryRequest(request.id)}
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="text-center">
+                  <Clock className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
+                  <h3 className="text-2xl font-semibold text-emerald-600 mb-2">Coming Soon</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Delivery request management features are currently under development.
+                    Stay tuned for updates!
+                  </p>
+                </div>
               </div>
             </motion.div>
           </TabsContent>
-          
+
           <TabsContent value="donationHistory" className="space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -341,28 +314,16 @@ export default function OrganizationHome() {
               <h2 className="text-xl font-semibold mb-3 text-emerald-600 text-center">
                 Donation History
               </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {donationHistory.map((donation) => (
-                  <Card key={donation.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium text-emerald-600">{donation.charityName}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Food Type: {donation.foodType}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Date: {donation.date}
-                          </p>
-                        </div>
-                        <Badge className="bg-emerald-100 text-emerald-800">
-                          {donation.status}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="text-center">
+                  <Clock className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
+                  <h3 className="text-2xl font-semibold text-emerald-600 mb-2">Coming Soon</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Donation history tracking features are currently under development.
+                    Stay tuned for updates!
+                  </p>
+                </div>
               </div>
             </motion.div>
           </TabsContent>
@@ -376,14 +337,14 @@ export default function OrganizationHome() {
               <h2 className="text-xl font-semibold mb-3 text-emerald-600 text-center">
                 Charities & Shelters
               </h2>
-              
+
               <div className="flex flex-wrap gap-2 mb-4 justify-center">
                 <Button
                   variant={selectedCategory === "all" ? "default" : "outline"}
                   onClick={() => setSelectedCategory("all")}
                   className={`flex items-center gap-2 ${
-                    selectedCategory === "all" 
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                    selectedCategory === "all"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                       : "hover:bg-emerald-50"
                   }`}
                 >
@@ -395,8 +356,8 @@ export default function OrganizationHome() {
                     variant={selectedCategory === category ? "default" : "outline"}
                     onClick={() => setSelectedCategory(category as CharityCategory)}
                     className={`flex items-center gap-2 ${
-                      selectedCategory === category 
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                      selectedCategory === category
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                         : "hover:bg-emerald-50"
                     }`}
                   >

@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/ui/bottom-nav";
 import { CreateTicketForm } from "@/components/tickets/create-ticket-form";
 import { FoodCategory, OrgDeliveryCapability } from "@/types";
 import { EditableWrapper } from "@/components/ui/editable-wrapper";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,11 +23,11 @@ export default function CreateTicket() {
   const [organizationName, setOrganizationName] = useState("");
   const [organizationId, setOrganizationId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
     console.log("Current user for ticket creation:", currentUser);
-    
+
     if (currentUser && currentUser.name) {
       setOrganizationName(currentUser.name);
       setOrganizationId(currentUser.id || "");
@@ -36,7 +36,7 @@ export default function CreateTicket() {
       setOrganizationName("Unknown Organization");
     }
   }, []);
-  
+
   const handleCreateTicket = async (ticketData: {
     foodType: string;
     category: FoodCategory;
@@ -53,7 +53,7 @@ export default function CreateTicket() {
     try {
       setIsSubmitting(true);
       console.log("Creating ticket for organization:", organizationName, "with ID:", organizationId);
-      
+
       const isFactoryDelivery = ticketData.deliveryCapability === "factory-only";
       const factoryData = isFactoryDelivery ? {
         factoryId: "factory-1",
@@ -62,7 +62,7 @@ export default function CreateTicket() {
         status: "pending" as const,
         conversionStatus: "pending" as const,
       } : {};
-      
+
       const newTicket = {
         organizationId,
         organizationName,
@@ -71,15 +71,11 @@ export default function CreateTicket() {
         status: isFactoryDelivery ? "expired" as const : "pending" as const,
         createdAt: new Date().toISOString(),
       };
-      
-      // Save to Supabase
+
+      // Save to Supabase database
       const savedTicket = await createFoodTicket(newTicket);
       console.log("Ticket created in Supabase:", savedTicket);
-      
-      // Also save to localStorage for offline access
-      const existingTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-      localStorage.setItem("foodTickets", JSON.stringify([...existingTickets, savedTicket]));
-      
+
       setIsDialogOpen(true);
     } catch (error) {
       console.error("Error creating ticket:", error);
@@ -93,7 +89,7 @@ export default function CreateTicket() {
       setIsSubmitting(false);
     }
   };
-  
+
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     navigate("/organization");
@@ -122,7 +118,7 @@ export default function CreateTicket() {
           </EditableWrapper>
         </div>
 
-        <CreateTicketForm 
+        <CreateTicketForm
           organizationName={organizationName}
           onSubmit={handleCreateTicket}
         />
@@ -141,10 +137,10 @@ export default function CreateTicket() {
               </DialogDescription>
             </EditableWrapper>
           </DialogHeader>
-          
+
           <DialogFooter>
             <EditableWrapper onSave={(value) => console.log("Button text edited:", value)}>
-              <Button 
+              <Button
                 onClick={handleDialogClose}
                 className="bg-charity-primary hover:bg-charity-dark"
               >

@@ -12,7 +12,6 @@ import { LocationConsentDialog } from "@/components/tracking/location-consent-di
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { getFoodTickets } from '@/utils/tickets';
 import { getCurrentUser, getUserSession, clearUserSession } from '@/utils/auth';
 import { supabase } from '@/utils/supabaseClient';
 
@@ -154,11 +153,7 @@ function CharityHomeContent() {
         setOrganizations(mockOrganizations);
       }
 
-      try {
-        await getFoodTickets({ status: 'pending' });
-      } catch (error) {
-        console.warn('Failed to load tickets:', error);
-      }
+      // Tickets are now handled only in the notifications page
 
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -215,6 +210,8 @@ function CharityHomeContent() {
     clearUserSession();
     navigate("/login", { replace: true });
   };
+
+  // Ticket handling is now done only in the notifications page
 
   // Filter + search + sort on organizations
   const filteredOrganizations = organizations
@@ -306,6 +303,8 @@ function CharityHomeContent() {
             </motion.div>
           </div>
         </div>
+
+        {/* Tickets are now handled only in the notifications page */}
 
         <div className="mb-8">
           <EditableWrapper onSave={(value) => console.log("Title edited:", value)}>

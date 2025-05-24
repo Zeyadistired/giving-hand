@@ -4,7 +4,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { TicketDetails } from "@/components/tickets/ticket-details";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,66 +12,17 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { 
+import {
   RadioGroup,
   RadioGroupItem
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { FoodTicket, DeliveryMethod, OrgDeliveryCapability } from "@/types";
+import { updateFoodTicket, getFoodTicketsEnhanced } from "@/utils/tickets";
+import { getCurrentUser } from "@/utils/auth";
+import { toast } from "sonner";
 
-const mockTickets: FoodTicket[] = [
-  {
-    id: "1",
-    organizationId: "4",
-    organizationName: "Skyline Restaurant",
-    foodType: "Assorted Buffet Items",
-    category: "prepared",
-    weight: 5.2,
-    pieces: 20,
-    expiryDate: "2025-04-18T20:00:00.000Z",
-    notes: "Contains rice, vegetables, and chicken dishes. All properly stored and packaged.",
-    createdAt: "2025-04-17T15:30:00.000Z",
-    status: "pending",
-  },
-  {
-    id: "2",
-    organizationId: "1",
-    organizationName: "Gourmet Palace Hotel",
-    foodType: "Breakfast Pastries",
-    category: "bakery",
-    weight: 3.5,
-    pieces: 40,
-    expiryDate: "2025-04-18T12:00:00.000Z",
-    notes: "Assorted croissants, muffins, and Danish pastries from breakfast buffet.",
-    createdAt: "2025-04-17T09:15:00.000Z",
-    status: "pending",
-  },
-  {
-    id: "3",
-    organizationId: "3",
-    organizationName: "Fathalla Supermarket",
-    foodType: "Fresh Produce",
-    category: "produce",
-    weight: 8.0,
-    expiryDate: "2025-04-20T23:59:00.000Z",
-    notes: "Mixed vegetables and fruits, all in good condition, slight cosmetic imperfections.",
-    createdAt: "2025-04-17T10:45:00.000Z",
-    status: "pending",
-  },
-  {
-    id: "4",
-    organizationId: "2",
-    organizationName: "Fresh Market Supermarket",
-    foodType: "Dairy Products",
-    category: "dairy",
-    weight: 4.5,
-    expiryDate: "2025-04-19T23:59:00.000Z",
-    notes: "Milk, yogurt, and cheese approaching sell-by date but still fresh.",
-    createdAt: "2025-04-16T16:20:00.000Z",
-    status: "accepted",
-    acceptedBy: "Your Charity",
-  },
-];
+// Mock data removed - now using only database data
 
 export default function TicketDetail() {
   const { orgId, ticketId } = useParams();
@@ -100,62 +51,115 @@ export default function TicketDetail() {
   });
   const [selectedOrgName, setSelectedOrgName] = useState<string>("");
   const [showDeliveryOptions, setShowDeliveryOptions] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (orgId) {
-      const filteredTickets = mockTickets
-        .map(t => ({
-          ...t, 
-          deliveryCapability: t.deliveryCapability ?? "accepts-requests"
-        }))
-        .filter(t => t.organizationId === orgId);
-      setTickets(filteredTickets);
-      if (filteredTickets.length > 0) setSelectedOrgName(filteredTickets[0].organizationName);
-    } else if (ticketId) {
-      const foundTicketRaw = mockTickets.find(t => t.id === ticketId);
-      const foundTicket = foundTicketRaw
-        ? { ...foundTicketRaw, deliveryCapability: foundTicketRaw.deliveryCapability ?? "accepts-requests" }
-        : undefined;
-      if (foundTicket) {
-        setTicket(foundTicket);
-      } else {
-        const localStorageTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-        const localTicket = localStorageTickets.find((t: any) => t.id === ticketId);
-        
-        if (localTicket) {
-          const ticketWithCapability = {
-            ...localTicket,
-            deliveryCapability: localTicket.deliveryCapability ?? "accepts-requests"
-          };
-          setTicket(ticketWithCapability);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Get current user
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+
+        if (orgId) {
+          // Load tickets for specific organization
+          const allTickets = await getFoodTicketsEnhanced({ organizationId: orgId });
+          const filteredTickets = allTickets.map(t => ({
+            ...t,
+            deliveryCapability: t.deliveryCapability ?? "accepts-requests"
+          }));
+          setTickets(filteredTickets);
+          if (filteredTickets.length > 0) setSelectedOrgName(filteredTickets[0].organizationName);
+        } else if (ticketId) {
+          // Load specific ticket
+          try {
+            const allTickets = await getFoodTicketsEnhanced();
+            const foundTicket = allTickets.find(t => t.id === ticketId);
+
+            if (foundTicket) {
+              const ticketWithCapability = {
+                ...foundTicket,
+                deliveryCapability: foundTicket.deliveryCapability ?? "accepts-requests"
+              };
+              setTicket(ticketWithCapability);
+            } else {
+              toast.error("Ticket not found");
+              navigate("/notifications");
+            }
+          } catch (error) {
+            console.error("Error loading ticket:", error);
+            toast.error("Failed to load ticket from database");
+            navigate("/notifications");
+          }
         } else {
-          navigate("/notifications");
+          navigate("/charity");
         }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Failed to load ticket data");
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      navigate("/charity");
-    }
+    };
+
+    loadData();
   }, [orgId, ticketId, navigate]);
 
-  if (!ticket && ticketId) {
+  if (isLoading || (!ticket && ticketId)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Loading ticket details...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-charity-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading ticket details...</p>
+        </div>
       </div>
     );
   }
 
-  const handleAccept = (id: string) => {
-    if (!ticket) return;
-    setTicket({ ...ticket, status: "accepted", acceptedBy: "Your Charity" });
-    setIsDialogOpen(true);
-    setShowDeliveryOptions(false);
+  const handleAccept = async (id: string) => {
+    if (!ticket || !currentUser) {
+      toast.error("Please log in to accept tickets");
+      return;
+    }
+
+    try {
+      await updateFoodTicket(id, {
+        status: "accepted",
+        acceptedBy: currentUser.id
+      });
+
+      setTicket({ ...ticket, status: "accepted", acceptedBy: currentUser.id });
+      setIsDialogOpen(true);
+      setShowDeliveryOptions(false);
+      toast.success("Ticket accepted successfully!");
+
+    } catch (error) {
+      console.error("Error accepting ticket:", error);
+      toast.error("Failed to accept ticket. Please try again.");
+    }
   };
 
-  const handleDecline = (id: string) => {
-    if (!ticket) return;
-    setTicket({ ...ticket, status: "declined" });
-    navigate("/notifications");
+  const handleDecline = async (id: string) => {
+    if (!ticket || !currentUser) {
+      toast.error("Please log in to decline tickets");
+      return;
+    }
+
+    try {
+      await updateFoodTicket(id, {
+        status: "declined"
+      });
+
+      setTicket({ ...ticket, status: "declined" });
+      toast.success("Ticket declined");
+      navigate("/notifications");
+
+    } catch (error) {
+      console.error("Error declining ticket:", error);
+      toast.error("Failed to decline ticket. Please try again.");
+    }
   };
 
   const handleDeliveryMethodSelect = (method: DeliveryMethod) => {
@@ -172,7 +176,7 @@ export default function TicketDetail() {
     if (selectedDeliveryMethod === "organization-delivery") {
       setOrgDeliveryRequested(true);
       setOrgDeliveryPending(true);
-      
+
       if (ticketId) {
         localStorage.setItem(`delivery-requested-${ticketId}`, "true");
         localStorage.setItem(`delivery-pending-${ticketId}`, "true");
@@ -207,7 +211,7 @@ export default function TicketDetail() {
   };
 
   const showOrgDeliveryOption = ticket && (
-    ticket.deliveryCapability === "self-delivery" || 
+    ticket.deliveryCapability === "self-delivery" ||
     ticket.deliveryCapability === "accepts-requests"
   );
 
@@ -260,7 +264,7 @@ export default function TicketDetail() {
           {tickets.length > 0 ? (
             <div className="space-y-4">
               {tickets.map(ticket => (
-                <div 
+                <div
                   key={ticket.id}
                   className="border rounded-lg p-4 cursor-pointer hover:border-charity-tertiary"
                   onClick={() => navigate(`/ticket/${ticket.id}`)}
@@ -281,7 +285,7 @@ export default function TicketDetail() {
               <p className="text-muted-foreground text-center">
                 This organization hasn't shared any donation tickets yet.
               </p>
-              <Button 
+              <Button
                 className="mt-4"
                 variant="outline"
                 onClick={() => navigate("/charity")}
@@ -419,7 +423,7 @@ export default function TicketDetail() {
               How would you like to receive this food donation?
             </DialogDescription>
           </DialogHeader>
-          
+
           <RadioGroup
             value={selectedDeliveryMethod}
             onValueChange={(value) => setSelectedDeliveryMethod(value as DeliveryMethod)}
@@ -434,7 +438,7 @@ export default function TicketDetail() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3 space-y-0">
               <RadioGroupItem value="organization-delivery" id="organization-delivery" />
               <div className="grid gap-1.5">
@@ -444,7 +448,7 @@ export default function TicketDetail() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3 space-y-0">
               <RadioGroupItem value="shipping" id="shipping" />
               <div className="grid gap-1.5">
@@ -455,12 +459,12 @@ export default function TicketDetail() {
               </div>
             </div>
           </RadioGroup>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleDeliveryConfirm}
               className="bg-charity-primary hover:bg-charity-dark"
             >
