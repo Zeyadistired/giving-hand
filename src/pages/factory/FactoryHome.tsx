@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Info, Settings, HelpCircle, Heart } from "lucide-react";
+import { Info, Heart } from "lucide-react";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { FoodTicket } from "@/types";
 import { FactoryTicketCard } from "@/components/factory/factory-ticket-card";
@@ -8,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { motion } from "framer-motion";
+import { getFoodTickets, updateFoodTicket } from "@/utils/tickets";
+import { toast } from "sonner";
 
 export default function FactoryHome() {
   const navigate = useNavigate();
@@ -21,133 +23,100 @@ export default function FactoryHome() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    console.log("FactoryHome useEffect running");
-    const currentUser = getUserSession();
-    console.log("Current user:", currentUser);
-    
-    if (currentUser) {
-      setFactory({
-        name: currentUser.name,
-        id: currentUser.id
-      });
-    }
+    const loadData = async () => {
+      const currentUser = getUserSession();
+      if (currentUser) {
+        setFactory({
+          name: currentUser.name,
+          id: currentUser.id
+        });
+
+        try {
+          // Load tickets from database
+          const allTickets = await getFoodTickets();
+
+          // Filter for factory tickets
+          const factoryTickets = allTickets.filter((ticket: FoodTicket) =>
+            ticket.factoryId === currentUser.id ||
+            (ticket.deliveryCapability === "factory-only" && !ticket.factoryId) ||
+            (ticket.status === "expired" && ticket.deliveryCapability === "factory-only")
+          );
+
+          setPendingTickets(factoryTickets.filter((t: FoodTicket) =>
+            (t.conversionStatus === "pending" || !t.conversionStatus) && t.status !== "accepted"
+          ));
+
+          setAcceptedTickets(factoryTickets.filter((t: FoodTicket) =>
+            t.status === "accepted" && t.conversionStatus !== "converted" && t.factoryId
+          ));
+
+          setConvertedTickets(factoryTickets.filter((t: FoodTicket) =>
+            t.conversionStatus === "converted"
+          ));
+        } catch (error) {
+          console.error("Error loading tickets:", error);
+          toast.error("Failed to load tickets");
+        }
+      }
+    };
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener("scroll", handleScroll);
-
-    // Load tickets from localStorage
-    try {
-      const ticketsJson = localStorage.getItem("foodTickets");
-      console.log("Raw tickets from localStorage:", ticketsJson);
-      
-      if (!ticketsJson) {
-        console.error("No tickets found in localStorage");
-        return;
-      }
-      
-      const loadedTickets = JSON.parse(ticketsJson);
-      console.log("All loaded tickets:", loadedTickets);
-      
-      if (!Array.isArray(loadedTickets) || loadedTickets.length === 0) {
-        console.error("Tickets is not an array or is empty:", loadedTickets);
-        return;
-      }
-      
-      // Filter for factory tickets - only show expiry food
-      const factoryTickets = loadedTickets.filter((ticket: FoodTicket) => {
-        console.log("Checking ticket:", ticket);
-        console.log("Ticket properties - foodType:", ticket.foodType, 
-                   "deliveryCapability:", ticket.deliveryCapability, 
-                   "status:", ticket.status, 
-                   "isExpired:", ticket.isExpired);
-                   
-        // Check each condition separately for debugging
-        const isFoodTypeExpiry = ticket.foodType === 'expiry';
-        const isFactoryOnly = ticket.deliveryCapability === "factory-only";
-        const isStatusExpired = ticket.status === 'expired';
-        const isExpiredFlag = ticket.isExpired === true;
-        
-        console.log("Conditions:", {
-          isFoodTypeExpiry,
-          isFactoryOnly,
-          isStatusExpired,
-          isExpiredFlag
-        });
-        
-        return isFoodTypeExpiry || isFactoryOnly || isStatusExpired || isExpiredFlag;
-      });
-      
-      console.log("Filtered factory tickets:", factoryTickets);
-      
-      setPendingTickets(factoryTickets.filter((t: FoodTicket) => t.status === 'pending' || !t.factoryId));
-      setAcceptedTickets(factoryTickets.filter((t: FoodTicket) => t.status === 'accepted' && t.factoryId === factory.id));
-    } catch (error) {
-      console.error("Error processing tickets:", error);
-    }
+    loadData();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [factory.id]);
+  }, []);
 
-  const handleAccept = (ticketId: string) => {
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((ticket: FoodTicket) => {
-      if (ticket.id === ticketId) {
-        return {
-          ...ticket, 
-          factoryId: factory.id,
-          factoryName: factory.name,
-          status: "accepted",
-        };
-      }
-      return ticket;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    const acceptedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-    setPendingTickets(prev => prev.filter(t => t.id !== ticketId));
-    setAcceptedTickets(prev => [...prev, acceptedTicket]);
+  const handleAccept = async (ticketId: string) => {
+    try {
+      const updatedTicket = await updateFoodTicket(ticketId, {
+        factoryId: factory.id,
+        factoryName: factory.name,
+        status: "accepted",
+      });
+
+      setPendingTickets(prev => prev.filter(t => t.id !== ticketId));
+      setAcceptedTickets(prev => [...prev, updatedTicket]);
+      toast.success("Request accepted successfully");
+    } catch (error) {
+      console.error("Error accepting ticket:", error);
+      toast.error("Failed to accept request. Please try again.");
+    }
   };
-  
-  const handleReject = (ticketId: string) => {
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((ticket: FoodTicket) => {
-      if (ticket.id === ticketId) {
-        return {
-          ...ticket, 
-          conversionStatus: "rejected",
-          status: "declined"
-        };
-      }
-      return ticket;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    setPendingTickets(prev => prev.filter(t => t.id !== ticketId));
+
+  const handleReject = async (ticketId: string) => {
+    try {
+      await updateFoodTicket(ticketId, {
+        conversionStatus: "rejected",
+        status: "declined"
+      });
+
+      setPendingTickets(prev => prev.filter(t => t.id !== ticketId));
+      toast.info("Request rejected");
+    } catch (error) {
+      console.error("Error rejecting ticket:", error);
+      toast.error("Failed to reject request. Please try again.");
+    }
   };
-  
-  const handleMarkConverted = (ticketId: string) => {
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const updatedTickets = loadedTickets.map((ticket: FoodTicket) => {
-      if (ticket.id === ticketId) {
-        return {
-          ...ticket, 
-          conversionStatus: "converted"
-        };
-      }
-      return ticket;
-    });
-    
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    const convertedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-    setAcceptedTickets(prev => prev.filter(t => t.id !== ticketId));
-    setConvertedTickets(prev => [...prev, convertedTicket]);
+
+  const handleMarkConverted = async (ticketId: string) => {
+    try {
+      const updatedTicket = await updateFoodTicket(ticketId, {
+        conversionStatus: "converted"
+      });
+
+      setAcceptedTickets(prev => prev.filter(t => t.id !== ticketId));
+      setConvertedTickets(prev => [...prev, updatedTicket]);
+      toast.success("Food marked as converted successfully");
+    } catch (error) {
+      console.error("Error marking as converted:", error);
+      toast.error("Failed to mark as converted. Please try again.");
+    }
   };
-  
+
   const handleViewTicket = (ticketId: string) => {
     navigate(`/factory/ticket/${ticketId}`);
   };
@@ -181,8 +150,8 @@ export default function FactoryHome() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <h1 className="text-3xl font-bold text-white mb-2">Factory Dashboard</h1>
               <p className="text-white/90 max-w-md">
-                {pendingTickets.length > 0 
-                  ? `You have ${pendingTickets.length} pending food conversion requests` 
+                {pendingTickets.length > 0
+                  ? `You have ${pendingTickets.length} pending food conversion requests`
                   : "No pending conversion requests"}
               </p>
             </motion.div>
@@ -235,7 +204,7 @@ export default function FactoryHome() {
             </div>
           </div>
         )}
-        
+
         {acceptedTickets.length > 0 && (
           <div className="mb-8">
             <h2 className="font-medium mb-4 flex items-center gap-2">
@@ -291,7 +260,7 @@ export default function FactoryHome() {
             </div>
           </div>
         )}
-        
+
         {pendingTickets.length === 0 && acceptedTickets.length === 0 && convertedTickets.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-gray-100 h-20 w-20 flex items-center justify-center rounded-full mx-auto mb-4">
@@ -303,7 +272,7 @@ export default function FactoryHome() {
             <p className="text-muted-foreground">
               You'll be notified when organizations send expired food for conversion
             </p>
-            <Button 
+            <Button
               variant="outline"
               className="mt-4"
               onClick={() => navigate("/factory/help")}
