@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -8,13 +7,40 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export function NotificationsTab() {
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsAlerts, setSmsAlerts] = useState(false);
-  const [ticketUpdates, setTicketUpdates] = useState(true);
-  const [promoAlerts, setPromoAlerts] = useState(false);
-  const [donationActivity, setDonationActivity] = useState(true);
+  // Load initial state from localStorage or use defaults
+  const [emailNotifications, setEmailNotifications] = useState(() => {
+    const saved = localStorage.getItem("emailNotifications");
+    return saved ? JSON.parse(saved) : true;
+  });
+  
+  const [smsAlerts, setSmsAlerts] = useState(() => {
+    const saved = localStorage.getItem("smsAlerts");
+    return saved ? JSON.parse(saved) : false;
+  });
+  
+  const [ticketUpdates, setTicketUpdates] = useState(() => {
+    const saved = localStorage.getItem("ticketUpdates");
+    return saved ? JSON.parse(saved) : true;
+  });
+  
+  const [promoAlerts, setPromoAlerts] = useState(() => {
+    const saved = localStorage.getItem("promoAlerts");
+    return saved ? JSON.parse(saved) : false;
+  });
+  
+  const [donationActivity, setDonationActivity] = useState(() => {
+    const saved = localStorage.getItem("donationActivity");
+    return saved ? JSON.parse(saved) : true;
+  });
 
   const handleSavePreferences = () => {
+    // Save all preferences to localStorage
+    localStorage.setItem("emailNotifications", JSON.stringify(emailNotifications));
+    localStorage.setItem("smsAlerts", JSON.stringify(smsAlerts));
+    localStorage.setItem("ticketUpdates", JSON.stringify(ticketUpdates));
+    localStorage.setItem("promoAlerts", JSON.stringify(promoAlerts));
+    localStorage.setItem("donationActivity", JSON.stringify(donationActivity));
+    
     toast.success("Notification preferences saved successfully");
   };
 

@@ -1,4 +1,3 @@
-
 import { Charity } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +18,10 @@ export function CharityCard({ charity, onClick, isSelected = false }: CharityCar
     foodbank: Soup,
   };
 
-  const CategoryIcon = charity.category ? categoryIcons[charity.category] : null;
+  const CategoryIcon = charity?.category ? categoryIcons[charity.category] : null;
+  const categoryDisplay = charity?.category 
+    ? charity.category.charAt(0).toUpperCase() + charity.category.slice(1)
+    : "Uncategorized";
 
   return (
     <Card 
@@ -31,9 +33,9 @@ export function CharityCard({ charity, onClick, isSelected = false }: CharityCar
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-semibold text-charity-primary">{charity.name}</h3>
+            <h3 className="font-semibold text-charity-primary">{charity?.name || "Unnamed Organization"}</h3>
             <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-              {charity.description || "Supporting those in need"}
+              {charity?.description || "Supporting those in need"}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -41,7 +43,7 @@ export function CharityCard({ charity, onClick, isSelected = false }: CharityCar
               <CategoryIcon className="h-5 w-5 text-charity-tertiary" />
             )}
             <Badge className="bg-charity-tertiary hover:bg-charity-tertiary/90">
-              {charity.category.charAt(0).toUpperCase() + charity.category.slice(1)}
+              {categoryDisplay}
             </Badge>
           </div>
         </div>

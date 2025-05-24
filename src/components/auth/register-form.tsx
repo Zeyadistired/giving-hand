@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Info } from "lucide-react";
+import { Eye, EyeOff, Info, ChevronDown } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { UserRole } from "@/types";
 import { toast } from "sonner";
+import { signUp } from "@/utils/auth";
+
+type OrganizationType = "hotel" | "supermarket" | "restaurant" | "other" | "";
+type CharityCategory = "homeless" | "children" | "animal" | "elderly" | "foodbank" | "";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
@@ -24,7 +28,9 @@ export function RegisterForm() {
     username: "",
     password: "",
     confirmPassword: "",
-    selectedRole: "guest" as UserRole,
+    selectedRole: "" as UserRole | "",
+    organizationType: "" as OrganizationType,
+    charityCategory: "" as CharityCategory,
   });
 
   const [errors, setErrors] = useState({
@@ -33,6 +39,9 @@ export function RegisterForm() {
     username: "",
     password: "",
     confirmPassword: "",
+    organizationType: "",
+    charityCategory: "",
+    selectedRole: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +64,9 @@ export function RegisterForm() {
       username: "",
       password: "",
       confirmPassword: "",
+      organizationType: "",
+      charityCategory: "",
+      selectedRole: "",
     };
 
     if (!formData.email) {
@@ -83,12 +95,38 @@ export function RegisterForm() {
       newErrors.fullName = "Full name is required";
     }
 
+    if (!formData.selectedRole) {
+      newErrors.selectedRole = "Please select an account type";
+    }
+
+    if (formData.selectedRole === "organization" && !formData.organizationType) {
+      newErrors.organizationType = "Please select your organization type";
+    }
+
+    if (formData.selectedRole === "charity" && !formData.charityCategory) {
+      newErrors.charityCategory = "Please select your charity category";
+    }
+
     setErrors(newErrors);
 
-    setIsFormValid(
-      Object.values(newErrors).every(error => !error) &&
-      Object.values(formData).every(value => value !== "")
-    );
+    const isBasicInfoValid = 
+      formData.email !== "" &&
+      formData.fullName !== "" &&
+      formData.username !== "" &&
+      formData.password !== "" &&
+      formData.confirmPassword !== "" &&
+      formData.selectedRole !== "" &&
+      !newErrors.email &&
+      !newErrors.fullName &&
+      !newErrors.username &&
+      !newErrors.password &&
+      !newErrors.confirmPassword;
+
+    const isRoleInfoValid = 
+      (formData.selectedRole !== "organization" || formData.organizationType !== "") &&
+      (formData.selectedRole !== "charity" || formData.charityCategory !== "");
+
+    setIsFormValid(isBasicInfoValid && isRoleInfoValid);
   };
 
   const handleInputChange = (field: keyof typeof formData) => (
@@ -113,57 +151,37 @@ export function RegisterForm() {
 
   const handleFinalRegister = async () => {
     setSubmitting(true);
-    const initialDb = JSON.parse(localStorage.getItem("initialDatabase") || "[]");
-    const existingUsers = JSON.parse(localStorage.getItem("usersDatabase") || "[]");
-    const combinedUsers = [...initialDb, ...existingUsers];
+    try {
+      // Sign up with Supabase
+      const user = await signUp({
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        username: formData.username,
+        userType: formData.selectedRole,
+        organizationType: formData.organizationType,
+        charityCategory: formData.charityCategory,
+      });
 
-    const emailExists = combinedUsers.some(
-      user => user.email && user.email.toLowerCase() === formData.email.toLowerCase()
-    );
-
-    if (emailExists) {
-      setErrors(prev => ({
-        ...prev,
-        email: "Email already exists"
-      }));
+      toast.success("Account created successfully! Please login.");
+      setShowTermsModal(false);
+      setPendingSubmit(false);
+      setSubmitting(false);
+      navigate("/login");
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      if (error.message.includes('already registered')) {
+        setErrors(prev => ({
+          ...prev,
+          email: "Email already exists"
+        }));
+      } else {
+        toast.error(error.message || 'Failed to create account');
+      }
       setShowTermsModal(false);
       setSubmitting(false);
       setPendingSubmit(false);
-      return;
     }
-
-    const usernameExists = combinedUsers.some(
-      user => user.username && user.username.toLowerCase() === formData.username.toLowerCase()
-    );
-
-    if (usernameExists) {
-      setErrors(prev => ({
-        ...prev,
-        username: "Username already taken"
-      }));
-      setShowTermsModal(false);
-      setSubmitting(false);
-      setPendingSubmit(false);
-      return;
-    }
-
-    const newUser = {
-      id: `USER${Math.floor(Math.random() * 10000)}`,
-      name: formData.fullName,
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-      type: formData.selectedRole
-    };
-
-    existingUsers.push(newUser);
-    localStorage.setItem("usersDatabase", JSON.stringify(existingUsers));
-
-    toast.success("Account created successfully! Please login.");
-    setShowTermsModal(false);
-    setPendingSubmit(false);
-    setSubmitting(false);
-    navigate("/login");
   };
 
   return (
@@ -267,26 +285,105 @@ export function RegisterForm() {
         </div>
 
         <div className="space-y-2">
-          <Label>Account Type</Label>
+          <Label>Account Type <span className="text-red-500">*</span></Label>
           <RadioGroup
             value={formData.selectedRole}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, selectedRole: value as UserRole }))}
-            className="grid grid-cols-3 gap-4"
+            onValueChange={(value) => setFormData(prev => ({ ...prev, selectedRole: value as UserRole | "" }))}
+            className="grid grid-cols-2 gap-4"
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="charity" id="charity" />
-              <Label htmlFor="charity">Charity/Shelter</Label>
+              <Label htmlFor="charity" className="flex items-center gap-1">
+                Charity
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="shelter" id="shelter" />
+              <Label htmlFor="shelter">Shelter</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="organization" id="organization" />
-              <Label htmlFor="organization">Organization</Label>
+              <Label htmlFor="organization" className="flex items-center gap-1">
+                Organization
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="factory" id="factory" />
               <Label htmlFor="factory">Factory</Label>
             </div>
           </RadioGroup>
+          {errors.selectedRole && (
+            <p className="text-sm text-red-500">{errors.selectedRole}</p>
+          )}
         </div>
+
+        {formData.selectedRole === "organization" && (
+          <div className="space-y-2">
+            <Label>Organization Type</Label>
+            <RadioGroup
+              value={formData.organizationType}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, organizationType: value as OrganizationType }))}
+              className="grid grid-cols-2 gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="hotel" id="hotel" />
+                <Label htmlFor="hotel">Hotel</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="supermarket" id="supermarket" />
+                <Label htmlFor="supermarket">Supermarket</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="restaurant" id="restaurant" />
+                <Label htmlFor="restaurant">Restaurant</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="other" id="other" />
+                <Label htmlFor="other">Other</Label>
+              </div>
+            </RadioGroup>
+            {errors.organizationType && (
+              <p className="text-sm text-red-500">{errors.organizationType}</p>
+            )}
+          </div>
+        )}
+
+        {formData.selectedRole === "charity" && (
+          <div className="space-y-2">
+            <Label>Charity Category</Label>
+            <RadioGroup
+              value={formData.charityCategory}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, charityCategory: value as CharityCategory }))}
+              className="grid grid-cols-2 gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="children" id="children" />
+                <Label htmlFor="children">Children</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="elderly" id="elderly" />
+                <Label htmlFor="elderly">Elderly</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="homeless" id="homeless" />
+                <Label htmlFor="homeless">Homeless</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="foodbank" id="foodbank" />
+                <Label htmlFor="foodbank">Food Bank</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="animal" id="animal" />
+                <Label htmlFor="animal">Animal Welfare</Label>
+              </div>
+            </RadioGroup>
+            {errors.charityCategory && (
+              <p className="text-sm text-red-500">{errors.charityCategory}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>

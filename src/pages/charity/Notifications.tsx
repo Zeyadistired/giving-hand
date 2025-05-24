@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { FoodTicketCard } from "@/components/tickets/food-ticket-card";
 import { Badge } from "@/components/ui/badge";
@@ -71,7 +70,6 @@ export default function Notifications() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-10 bg-white border-b px-4 py-3">
         <div className="flex justify-between items-center">
-          <Logo />
           <div className="flex items-center">
             <Bell className="h-5 w-5 text-charity-primary mr-2" />
             <Badge className="bg-charity-primary">{pendingTickets.length}</Badge>

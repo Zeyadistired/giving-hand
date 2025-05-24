@@ -5,24 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { BackButton } from "@/components/ui/back-button";
 import { Logo } from "@/components/ui/logo";
+import { resetPassword } from "@/utils/auth";
+import { toast } from "sonner";
 
 export function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [step, setStep] = useState<"email" | "reset" | "success">("email");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
+  const [step, setStep] = useState<"email" | "success">("email");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmitEmail = (e: React.FormEvent) => {
+  const handleSubmitEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    // This would typically trigger an email verification process
-    setStep("reset");
-  };
+    setIsLoading(true);
 
-  const handleResetPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword === confirmPassword) {
+    try {
+      await resetPassword(email);
       setStep("success");
+      toast.success("Password reset email sent successfully! Check your inbox.");
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast.error(error.message || 'Failed to send password reset email');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -51,61 +54,20 @@ export function ForgotPassword() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-charity-primary hover:bg-charity-dark">
-              Send Reset Link
-            </Button>
-          </form>
-        )}
-
-        {step === "reset" && (
-          <form onSubmit={handleResetPassword} className="w-full space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="code">Verification Code</Label>
-              <Input
-                id="code"
-                placeholder="Enter verification code"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-_@$!%*?&])[A-Za-z\d-_@$!%*?&]{8,}$"
-              />
-              <p className="text-xs text-muted-foreground">
-                Password must be at least 8 characters with upper and lowercase letters, numbers, and special characters
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full bg-charity-primary hover:bg-charity-dark">
-              Reset Password
+            <Button
+              type="submit"
+              className="w-full bg-charity-primary hover:bg-charity-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending..." : "Send Reset Link"}
             </Button>
           </form>
         )}
 
         {step === "success" && (
           <div className="text-center space-y-4">
-            <h2 className="text-xl font-semibold text-charity-primary">Password Reset Successful!</h2>
-            <p>Your password has been successfully reset.</p>
+            <h2 className="text-xl font-semibold text-charity-primary">Reset Email Sent!</h2>
+            <p>We've sent a password reset link to your email address. Please check your inbox and follow the instructions to reset your password.</p>
             <Button onClick={() => window.location.href = '/login'} className="w-full bg-charity-primary hover:bg-charity-dark">
               Return to Login
             </Button>

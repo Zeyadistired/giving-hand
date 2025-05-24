@@ -14,12 +14,15 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { BackButton } from "@/components/ui/back-button";
+import { createFoodTicket } from "@/utils/tickets";
+import { toast } from "sonner";
 
 export default function CreateTicket() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [organizationName, setOrganizationName] = useState("");
   const [organizationId, setOrganizationId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
@@ -34,7 +37,7 @@ export default function CreateTicket() {
     }
   }, []);
   
-  const handleCreateTicket = (ticketData: {
+  const handleCreateTicket = async (ticketData: {
     foodType: string;
     category: FoodCategory;
     weight: number;
@@ -43,34 +46,52 @@ export default function CreateTicket() {
     notes?: string;
     otherCategory?: string;
     deliveryCapability: OrgDeliveryCapability;
+    pickupLocation: string;
+    preferredPickupFrom: string;
+    preferredPickupTo: string;
   }) => {
-    console.log("Creating ticket for organization:", organizationName, "with ID:", organizationId);
-    
-    const isFactoryDelivery = ticketData.deliveryCapability === "factory-only";
-    const factoryData = isFactoryDelivery ? {
-      factoryId: "factory-1",
-      factoryName: "Eco Processing Factory",
-      isExpired: true,
-      status: "pending" as const,
-      conversionStatus: "pending" as const,
-    } : {};
-    
-    const newTicket = {
-      id: Math.random().toString(36).substr(2, 9),
-      organizationId,
-      organizationName,
-      ...ticketData,
-      ...factoryData,
-      createdAt: new Date().toISOString(),
-      status: isFactoryDelivery ? "expired" : "pending",
-    };
-    
-    const existingTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    localStorage.setItem("foodTickets", JSON.stringify([...existingTickets, newTicket]));
-    
-    console.log("Ticket created:", newTicket);
-    
-    setIsDialogOpen(true);
+    try {
+      setIsSubmitting(true);
+      console.log("Creating ticket for organization:", organizationName, "with ID:", organizationId);
+      
+      const isFactoryDelivery = ticketData.deliveryCapability === "factory-only";
+      const factoryData = isFactoryDelivery ? {
+        factoryId: "factory-1",
+        factoryName: "Eco Processing Factory",
+        isExpired: true,
+        status: "pending" as const,
+        conversionStatus: "pending" as const,
+      } : {};
+      
+      const newTicket = {
+        organizationId,
+        organizationName,
+        ...ticketData,
+        ...factoryData,
+        status: isFactoryDelivery ? "expired" as const : "pending" as const,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Save to Supabase
+      const savedTicket = await createFoodTicket(newTicket);
+      console.log("Ticket created in Supabase:", savedTicket);
+      
+      // Also save to localStorage for offline access
+      const existingTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
+      localStorage.setItem("foodTickets", JSON.stringify([...existingTickets, savedTicket]));
+      
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+      // Show more detailed error message
+      if (error instanceof Error) {
+        toast.error(`Failed to create ticket: ${error.message}`);
+      } else {
+        toast.error("Failed to create ticket. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleDialogClose = () => {

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { useNavigate } from "react-router-dom";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Map, MapPin } from "lucide-react";
@@ -34,7 +35,7 @@ const sampleMealTrackingData = [
     category: "bakery",
     quantity: "40 pieces (3.5kg)",
     status: "in-transit",
-    deliveryMethod: "organization-delivery", 
+    deliveryMethod: "organization-delivery",
     deliveryDate: "2025-04-22T10:15:00.000Z"
   },
   {
@@ -45,17 +46,18 @@ const sampleMealTrackingData = [
     quantity: "20 trays (5.2kg)",
     status: "accepted",
     deliveryMethod: "third-party",
-    deliveryDate: "2025-04-24T09:00:00.000Z" 
+    deliveryDate: "2025-04-24T09:00:00.000Z"
   }
 ];
 
 export function MealTracking() {
+  const navigate = useNavigate();
   const [trackingData, setTrackingData] = useState(() => {
     const savedTracking = JSON.parse(localStorage.getItem('meal-tracking') || '[]');
     return [...sampleMealTrackingData, ...savedTracking];
   });
   const [selectedTrackingItem, setSelectedTrackingItem] = useState<typeof sampleMealTrackingData[0] | null>(null);
-  
+
   const getCategoryColor = (category: string) => {
     const colors = {
       prepared: "bg-blue-100 text-blue-800",
@@ -67,7 +69,7 @@ export function MealTracking() {
     };
     return colors[category as keyof typeof colors] || colors.other;
   };
-  
+
   const getStatusColor = (status: string) => {
     const colors = {
       accepted: "bg-yellow-100 text-yellow-800",
@@ -77,7 +79,7 @@ export function MealTracking() {
     };
     return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
-  
+
   const getDeliveryMethodIcon = (method: string) => {
     switch (method) {
       case "self-pickup":
@@ -93,30 +95,31 @@ export function MealTracking() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { 
+    return date.toLocaleDateString("en-US", {
       weekday: "short",
-      month: "short", 
-      day: "numeric", 
+      month: "short",
+      day: "numeric",
       year: "numeric",
-      hour: "numeric", 
-      minute: "numeric" 
+      hour: "numeric",
+      minute: "numeric"
     });
   };
 
   const handleSimulateGPS = () => {
     const latitude = 30.0444;
     const longitude = 31.2357;
-    toast.success(
-      <>
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-charity-primary" />
-          <span>GPS Simulated:</span>
-        </div>
-        <div>
-          <span className="font-mono text-xs">Lat: {latitude}, Lng: {longitude}</span>
-        </div>
-      </>
-    );
+    const address = "Cairo, Egypt";
+    const timestamp = new Date().toLocaleString();
+
+    // Navigate to map with GPS coordinates
+    navigate('/charity/map', {
+      state: {
+        lat: latitude,
+        lng: longitude,
+        address: address,
+        timestamp: timestamp
+      }
+    });
   };
 
   return (
@@ -134,7 +137,7 @@ export function MealTracking() {
             Simulate GPS
           </Button>
         </div>
-        
+
         <div className="overflow-x-auto">
           <Table>
             <TableCaption>A list of your received and upcoming meals</TableCaption>
@@ -184,10 +187,10 @@ export function MealTracking() {
         </div>
       </div>
       <div className="sticky bottom-0">
-        <BottomNav 
-          userRole="charity" 
-          hideHelp={false} 
-          hideHome={false} 
+        <BottomNav
+          userRole="charity"
+          hideHelp={false}
+          hideHome={false}
         />
       </div>
       <Dialog open={!!selectedTrackingItem} onOpenChange={() => setSelectedTrackingItem(null)}>

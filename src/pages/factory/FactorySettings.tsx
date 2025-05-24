@@ -57,8 +57,8 @@ export default function FactorySettings() {
   };
 
   const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Password changed successfully");
+    // This is now handled by the PasswordDialog component itself
+    // Just close the dialog - the success message is shown by the dialog
     setIsPasswordDialogOpen(false);
   };
 
@@ -81,7 +81,7 @@ export default function FactorySettings() {
             </div>
           }
           historyTabContent={
-            <FactoryHistory 
+            <FactoryHistory
               isSubscribed={isSubscribed}
               onSubscribe={handleSubscribe}
             />

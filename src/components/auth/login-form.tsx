@@ -1,14 +1,11 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { setUserSession } from "@/utils/auth";
-import { initializeDatabase } from "@/utils/initializeDatabase";
+import { signIn } from "@/utils/auth";
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -18,109 +15,55 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Make sure database is initialized when login form is loaded
-  useEffect(() => {
-    initializeDatabase();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    
-    try {
-      // Force database initialization check
-      initializeDatabase();
 
-      console.log("Login attempt:", email);
+    try {
+      const user = await signIn(email, password);
       
-      // First check the initial database
-      const initialDb = JSON.parse(localStorage.getItem("initialDatabase") || "[]");
-      // Then check the user database
-      const existingUsers = JSON.parse(localStorage.getItem("usersDatabase") || "[]");
-      
-      const combinedUsers = [...initialDb, ...existingUsers];
-      
-      console.log("Available users:", combinedUsers);
-      
-      const user = combinedUsers.find(
-        (u: any) => 
-          (u.email && u.email.toLowerCase() === email.toLowerCase()) || 
-          (u.username && u.username.toLowerCase() === email.toLowerCase())
-      );
-      
-      if (!user) {
-        console.log("User not found");
-        setError("Invalid email or password.");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (user.password !== password) {
-        console.log("Password mismatch");
-        setError("Invalid email or password.");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log("Login successful for user:", user);
-      
-      // Set the user session
-      setUserSession({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-        type: user.type,
-      });
-      
-      toast.success("Login successful!");
+      // Store user session
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('userRole', user.type);
       
       // Navigate based on user type
       switch (user.type) {
-        case "charity":
-          navigate("/charity");
+        case 'charity':
+          navigate('/charity');
           break;
-        case "organization":
-          navigate("/organization");
+        case 'organization':
+          navigate('/organization');
           break;
-        case "admin":
-          navigate("/admin/dashboard");
+        case 'factory':
+          navigate('/factory');
           break;
-        case "factory":
-          navigate("/factory");
+        case 'admin':
+          navigate('/admin');
           break;
         default:
-          navigate("/guest");
+          navigate('/');
       }
       
-    } catch (error) {
-      console.error("Login error:", error);
-      setError("An error occurred. Please try again.");
+      toast.success('Successfully logged in!');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Failed to login');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleContinueAsGuest = () => {
-    setUserSession({
-      id: 'guest-' + Date.now(),
-      name: 'Guest',
-      email: '',
-      username: 'guest',
-      type: 'guest',
-    });
-    
+    // Implement guest login logic here
     toast.success("Continuing as Guest");
     navigate("/guest");
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto">
-      <Logo size="lg" className="mb-8" />
-      
-      <h1 className="text-2xl font-bold text-charity-primary mb-2">Welcome Back</h1>
-      <p className="text-muted-foreground mb-8">Sign in to your account</p>
+    <div className="flex flex-col items-center justify-center px-6 py-8 w-full max-w-md mx-auto">
+      <h1 className="text-3xl font-bold text-emerald-600 mb-2">Welcome Back</h1>
+      <p className="text-gray-600 mb-8">Sign in to your account</p>
       
       {error && (
         <div className="w-full p-3 mb-5 bg-red-50 text-red-700 rounded-md text-sm">
@@ -130,21 +73,22 @@ export function LoginForm() {
       
       <form onSubmit={handleSubmit} className="w-full space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email or Username</Label>
+          <Label htmlFor="email" className="text-gray-700">Email</Label>
           <Input
             id="email"
+            type="email"
+            placeholder="Enter your email"
             value={email}
-            placeholder="example@gmail.com"
             onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
             required
+            className="border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
           />
         </div>
         
         <div className="space-y-2">
           <div className="flex justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-sm text-charity-primary hover:underline">
+            <Label htmlFor="password" className="text-gray-700">Password</Label>
+            <Link to="/forgot-password" className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -152,15 +96,15 @@ export function LoginForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
               required
+              className="border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
             >
@@ -171,15 +115,15 @@ export function LoginForm() {
         
         <Button
           type="submit"
-          className="w-full bg-charity-primary hover:bg-charity-dark"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-md py-2"
           disabled={isLoading}
         >
-          {isLoading ? "Signing in..." : "Sign In"}
+          {isLoading ? 'Signing in...' : 'Sign In'}
         </Button>
         
         <div className="text-center text-sm mt-6">
-          <span className="text-muted-foreground">Don't have an account? </span>
-          <Link to="/register" className="text-charity-primary hover:underline font-medium">
+          <span className="text-gray-600">Don't have an account? </span>
+          <Link to="/register" className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium">
             Create Account
           </Link>
         </div>
@@ -189,7 +133,7 @@ export function LoginForm() {
         <Button
           variant="outline"
           onClick={handleContinueAsGuest}
-          className="w-full"
+          className="w-full border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600 text-emerald-600 rounded-md py-2"
         >
           Continue as Guest
         </Button>

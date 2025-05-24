@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,14 @@ export function LanguageTab() {
   const [language, setLanguage] = useState("en");
   const { theme, setTheme } = useTheme();
   
+  const handleLanguageChange = (value: string) => {
+    if (value === "ar") {
+      toast.info("Arabic language support coming soon!");
+      return;
+    }
+    setLanguage(value);
+  };
+
   const handleSaveLanguage = () => {
     toast.success(`Language updated to ${language === "en" ? "English" : "Arabic"}`);
   };
@@ -33,7 +40,7 @@ export function LanguageTab() {
           
           <RadioGroup 
             value={language} 
-            onValueChange={setLanguage}
+            onValueChange={handleLanguageChange}
             className="flex flex-col space-y-3"
           >
             <div className="flex items-center space-x-2">

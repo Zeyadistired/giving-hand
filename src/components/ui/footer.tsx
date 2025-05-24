@@ -1,11 +1,12 @@
 import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+// import { SocialIcon } from "@/components/ui/social-icon";
 
 // Social links for icons
 const socialLinks = [
   { name: "Facebook", url: "#", Icon: Facebook },
-  { name: "Instagram", url: "#", Icon: Instagram },
+  { name: "Instagram", url: "https://www.instagram.com/giv_inghand?igsh=MW1jZGQwMGJjYnF5ZQ==", Icon: Instagram },
   { name: "LinkedIn", url: "#", Icon: Linkedin },
   { name: "Twitter", url: "#", Icon: Twitter },
 ];
@@ -15,7 +16,10 @@ export function Footer() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   // Function to open the popup
-  const openPopup = (e) => {
+  const openPopup = (e: React.MouseEvent, platform: string) => {
+    // Don't show popup for Instagram
+    if (platform === 'instagram') return;
+
     e.preventDefault(); // Prevent default action (link behavior)
     setIsPopupOpen(true); // Show the popup
   };
@@ -31,22 +35,36 @@ export function Footer() {
       <div className="max-w-7xl mx-auto flex flex-col items-center justify-center gap-4 px-4 mb-8">
         <span className="text-lg font-semibold tracking-wide">Share. Care. Repeat.</span>
         <div className="flex space-x-4">
-          {socialLinks.map((link) => {
-            const Icon = link.Icon;
-            return (
-              <a
-                key={link.name}
-                href={link.url}
-                aria-label={link.name}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-accent-foreground transition-colors"
-                onClick={openPopup} // Handle click event to show popup
-              >
-                <Icon className="w-5 h-5" />
-              </a>
-            );
-          })}
+          <button
+            onClick={(e) => openPopup(e, 'facebook')}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            aria-label="Facebook"
+          >
+            <Facebook className="h-5 w-5" />
+          </button>
+          <a
+            href="https://www.instagram.com/giv_inghand?igsh=MW1jZGQwMGJjYnF5ZQ=="
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            aria-label="Instagram"
+          >
+            <Instagram className="h-5 w-5" />
+          </a>
+          <button
+            onClick={(e) => openPopup(e, 'linkedin')}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            aria-label="LinkedIn"
+          >
+            <Linkedin className="h-5 w-5" />
+          </button>
+          <button
+            onClick={(e) => openPopup(e, 'twitter')}
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            aria-label="Twitter"
+          >
+            <Twitter className="h-5 w-5" />
+          </button>
         </div>
       </div>
 

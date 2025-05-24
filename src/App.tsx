@@ -40,12 +40,14 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Cookies from "./pages/Cookies";
 import { MealTracking } from "./components/tracking/meal-tracking";
+import GpsMap from "./pages/charity/GpsMap";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import FactoryHome from "./pages/factory/FactoryHome";
 import FactoryHelp from "./pages/factory/FactoryHelp";
 import FactorySettings from "./pages/factory/FactorySettings";
 import FactoryTicketDetail from "./pages/factory/FactoryTicketDetail";
 import { initializeDatabase } from "./utils/initializeDatabase";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,7 +59,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  
+
   // Initialize database on app startup
   useEffect(() => {
     initializeDatabase();
@@ -85,7 +87,7 @@ function App() {
                 <Route path="/guest/help" element={<GuestHelp />} />
                 <Route path="/payment/:charityId" element={<Payment />} />
                 <Route path="/thank-you" element={<ThankYou />} />
-                
+
                 <Route path="/charity" element={<CharityHome />} />
                 <Route path="/charity/tickets/:orgId" element={<TicketDetail />} />
                 <Route path="/notifications" element={<Notifications />} />
@@ -94,19 +96,20 @@ function App() {
                 <Route path="/charity/settings" element={<CharitySettings />} />
                 <Route path="/charity/help" element={<CharityHelp />} />
                 <Route path="/charity/meal-tracking" element={<MealTracking />} />
-                
+                <Route path="/charity/map" element={<GpsMap />} />
+
                 <Route path="/organization" element={<OrganizationHome />} />
                 <Route path="/organization/help" element={<OrganizationHelp />} />
                 <Route path="/organization/create-ticket" element={<CreateTicket />} />
                 <Route path="/create-ticket" element={<CreateTicket />} />
                 <Route path="/food-handling" element={<FoodHandling />} />
                 <Route path="/organization/settings" element={<OrganizationSettings />} />
-                
+
                 <Route path="/profile" element={<Profile />} />
-                
+
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/help" element={<HelpCenter />} />
-                
+
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/cookies" element={<Cookies />} />
@@ -123,7 +126,8 @@ function App() {
                 <Route path="/factory/help" element={<FactoryHelp />} />
                 <Route path="/factory/settings" element={<FactorySettings />} />
                 <Route path="/factory/ticket/:ticketId" element={<FactoryTicketDetail />} />
-                
+
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

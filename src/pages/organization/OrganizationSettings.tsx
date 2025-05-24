@@ -19,43 +19,43 @@ export default function OrganizationSettings() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
+
   const [userData, setUserData] = useState({
     username: "",
     email: "",
     type: ""
   });
-  
+
   useEffect(() => {
     const user = getUserSession();
     if (!user) {
       navigate('/login');
       return;
     }
-    
+
     setUserData({
       username: user.name || "",
       email: user.email || "",
       type: user.type === "organization" ? "Organization" : user.type || ""
     });
-    
+
     // Check subscription status from user preferences
     const subscriptionStatus = getUserPreference('isPremium', false);
     setIsSubscribed(!!subscriptionStatus);
   }, [navigate]);
-  
+
   const handleLogout = () => {
     clearUserSession();
     toast.success("Logged out successfully");
     navigate("/login");
   };
-  
+
   const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Password changed successfully");
+    // This is now handled by the PasswordDialog component itself
+    // Just close the dialog - the success message is shown by the dialog
     setIsPasswordDialogOpen(false);
   };
-  
+
   const handleSubscribe = () => {
     setIsPaymentDialogOpen(true);
   };
@@ -76,7 +76,7 @@ export default function OrganizationSettings() {
           userData={userData}
           onLogout={handleLogout}
           profileTabContent={
-            <PersonalTab 
+            <PersonalTab
               userData={userData}
               onPasswordChange={() => setIsPasswordDialogOpen(true)}
               onLogout={handleLogout}
@@ -87,11 +87,11 @@ export default function OrganizationSettings() {
           }
           languageTabContent={
             <LanguageTab />
-            
+
           }
           historyTabContent={
-            <HistoryTab 
-              isSubscribed={isSubscribed} 
+            <HistoryTab
+              isSubscribed={isSubscribed}
               onSubscribe={handleSubscribe}
               userType="organization"
             />
@@ -104,7 +104,7 @@ export default function OrganizationSettings() {
           }
         />
       </main>
-      
+
       <PasswordDialog
         open={isPasswordDialogOpen}
         onOpenChange={setIsPasswordDialogOpen}

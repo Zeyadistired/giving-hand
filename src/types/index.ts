@@ -1,4 +1,3 @@
-
 export type OrgDeliveryCapability = "self-delivery" | "accepts-requests" | "none" | "factory-only";
 export type DeliveryMethod = "self-pickup" | "organization-delivery" | "shipping" | "factory-delivery";
 export type UserRole = "guest" | "charity" | "organization" | "admin" | "factory";
@@ -43,6 +42,7 @@ export interface Charity {
   website?: string;
   logo?: string;
   coverImage?: string;
+  image?: string;
 }
 
 export interface Hotel {

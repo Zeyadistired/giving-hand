@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, MessageCircle, BookOpen } from "lucide-react";
+import { Search, MessageCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,14 +52,6 @@ export default function CharityHelp() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="flex items-center px-4 py-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <EditableWrapper onSave={(value) => console.log("Header title edited:", value)}>
             <h1 className="text-lg font-medium">Help Center</h1>
           </EditableWrapper>

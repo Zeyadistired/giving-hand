@@ -7,12 +7,37 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getCookiePreferences, saveCookiePreferences } from "@/utils/cookiePreferences";
 
 export function LegalTab() {
-  const [analyticsConsent, setAnalyticsConsent] = useState(true);
-  const [marketingConsent, setMarketingConsent] = useState(false);
-  
+  // Load saved preferences from localStorage on component mount
+  const [analyticsConsent, setAnalyticsConsent] = useState(() => {
+    const preferences = getCookiePreferences();
+    return preferences.analytics;
+  });
+
+  const [marketingConsent, setMarketingConsent] = useState(() => {
+    const preferences = getCookiePreferences();
+    return preferences.marketing;
+  });
+
   const handleSavePreferences = () => {
+    // Debug: Log current state before saving
+    console.log("Legal tab - Saving preferences:", {
+      analytics: analyticsConsent,
+      marketing: marketingConsent
+    });
+
+    // Save cookie preferences using utility function
+    saveCookiePreferences({
+      analytics: analyticsConsent,
+      marketing: marketingConsent
+    });
+
+    // Debug: Log what was actually saved
+    const saved = getCookiePreferences();
+    console.log("Legal tab - Preferences after saving:", saved);
+
     toast.success("Cookie preferences saved successfully");
   };
 
@@ -27,17 +52,17 @@ export function LegalTab() {
           <Button variant="outline" className="w-full justify-start" asChild>
             <Link to="/terms">Terms & Conditions</Link>
           </Button>
-          
+
           <Button variant="outline" className="w-full justify-start" asChild>
             <Link to="/privacy">Privacy Policy</Link>
           </Button>
-          
+
           <Button variant="outline" className="w-full justify-start" asChild>
             <Link to="/cookies">Cookie Policy</Link>
           </Button>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Cookie Preferences</CardTitle>
@@ -58,13 +83,13 @@ export function LegalTab() {
                 </p>
               </AccordionContent>
             </AccordionItem>
-            
+
             <AccordionItem value="analytics">
               <AccordionTrigger>Analytics Cookies</AccordionTrigger>
               <AccordionContent>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="analytics" 
+                  <Checkbox
+                    id="analytics"
                     checked={analyticsConsent}
                     onCheckedChange={(checked) => setAnalyticsConsent(checked as boolean)}
                   />
@@ -77,13 +102,13 @@ export function LegalTab() {
                 </p>
               </AccordionContent>
             </AccordionItem>
-            
+
             <AccordionItem value="marketing">
               <AccordionTrigger>Marketing Cookies</AccordionTrigger>
               <AccordionContent>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="marketing" 
+                  <Checkbox
+                    id="marketing"
                     checked={marketingConsent}
                     onCheckedChange={(checked) => setMarketingConsent(checked as boolean)}
                   />
@@ -97,8 +122,8 @@ export function LegalTab() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          
-          <Button 
+
+          <Button
             className="w-full mt-4 bg-charity-primary hover:bg-charity-dark"
             onClick={handleSavePreferences}
           >

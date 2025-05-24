@@ -32,17 +32,20 @@ export function MainHeader() {
         
         <nav className="flex items-center gap-2 sm:gap-4 lg:gap-6">
           {navLinks.map((link) => (
-            <Link
+            <Button
               key={link.name}
-              to={link.path}
-              className={`text-sm sm:text-base font-medium px-2 py-1 rounded hover:bg-accent hover:text-accent-foreground transition-colors ${
+              variant="ghost"
+              asChild
+              className={`text-sm sm:text-base font-medium ${
                 pathname === link.path
                   ? "text-foreground underline underline-offset-4"
                   : "text-muted-foreground"
               }`}
             >
-              {link.name}
-            </Link>
+              <Link to={link.path}>
+                {link.name}
+              </Link>
+            </Button>
           ))}
           {showLogout && (
             <Button 

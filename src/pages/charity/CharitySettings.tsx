@@ -19,13 +19,13 @@ export default function CharitySettings() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
+
   const [userData, setUserData] = useState({
     username: "",
     email: "",
     type: ""
   });
-  
+
   useEffect(() => {
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
     setUserData({
@@ -33,13 +33,13 @@ export default function CharitySettings() {
       email: currentUser.email || "",
       type: currentUser.type === "charity" ? "Charity/Shelter" : currentUser.type || ""
     });
-    
+
     const subscriptionStatus = localStorage.getItem("isPremiumSubscribed");
     if (subscriptionStatus === "true") {
       setIsSubscribed(true);
     }
   }, []);
-  
+
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("userRole");
@@ -48,17 +48,17 @@ export default function CharitySettings() {
     toast.success("Logged out successfully");
     navigate("/login");
   };
-  
+
   const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Password changed successfully");
+    // This is now handled by the PasswordDialog component itself
+    // Just close the dialog - the success message is shown by the dialog
     setIsPasswordDialogOpen(false);
   };
-  
+
   const handleSubscribe = () => {
     setIsPaymentDialogOpen(true);
   };
-  
+
   const handleSubscriptionCompleted = () => {
     localStorage.setItem("isPremiumSubscribed", "true");
     setIsSubscribed(true);
@@ -75,14 +75,14 @@ export default function CharitySettings() {
           userData={userData}
           onLogout={handleLogout}
           profileTabContent={
-            <PersonalTab 
+            <PersonalTab
               userData={userData}
               onPasswordChange={() => setIsPasswordDialogOpen(true)}
               onLogout={handleLogout}
             />
           }
           securityTabContent={
-            <SecurityTab 
+            <SecurityTab
               onPasswordChange={handlePasswordChange}
               onLogout={handleLogout}
             />
@@ -94,8 +94,8 @@ export default function CharitySettings() {
             <LanguageTab />
           }
           historyTabContent={
-            <HistoryTab 
-              isSubscribed={isSubscribed} 
+            <HistoryTab
+              isSubscribed={isSubscribed}
               onSubscribe={handleSubscribe}
               userType="charity"
             />
@@ -108,7 +108,7 @@ export default function CharitySettings() {
           }
         />
       </main>
-      
+
       <PasswordDialog
         open={isPasswordDialogOpen}
         onOpenChange={setIsPasswordDialogOpen}
