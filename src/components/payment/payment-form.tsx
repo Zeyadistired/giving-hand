@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -45,7 +43,7 @@ const CARD_PATTERNS = {
 // Production-ready card validation
 const isValidCardNumber = (num: string): { isValid: boolean; type: CardType } => {
   const cleaned = num.replace(/\s+/g, '');
-  
+
   // Validate length and digits
   if (!/^\d{16}$/.test(cleaned)) {
     return { isValid: false, type: 'unknown' };
@@ -75,7 +73,7 @@ const isValidCardNumber = (num: string): { isValid: boolean; type: CardType } =>
     isEven = !isEven;
   }
 
-  return { 
+  return {
     isValid: sum % 10 === 0,
     type
   };
@@ -160,7 +158,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
       // Validate card number
       const cleanedCard = cardNumber.replace(/\s+/g, '');
       const { isValid: isCardValid, type } = isValidCardNumber(cleanedCard);
-      
+
       if (!isCardValid) {
         newErrors.cardNumber = "Please enter a valid card number";
         isValid = false;
@@ -197,7 +195,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submission started...');
-    
+
     if (!validateForm()) {
       console.log('Form validation failed');
       toast.error("Please fix the errors in the form");
@@ -214,7 +212,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
         payment_method: paymentMethod,
         donor_name: name,
         donor_phone: paymentMethod === "fawry" ? phone : undefined,
-        notes: paymentMethod === "visa" 
+        notes: paymentMethod === "visa"
           ? `Donation to ${charity.name} via ${paymentMethod}. Card ending in ${cardNumber.slice(-4)}, expires ${expiryDate}`
           : `Donation to ${charity.name} via ${paymentMethod}`
       };
@@ -229,7 +227,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
         const discounts = ["10%", "15%", "20%", "25%", "30%"];
         const randomDiscount = discounts[Math.floor(Math.random() * discounts.length)];
         const promoCode = `GIVE-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-        
+
         setPromoCode({
           code: promoCode,
           discount: randomDiscount,
@@ -260,7 +258,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
     if (formatted.replace(/\s/g, '').length === 16) {
       const { isValid, type } = isValidCardNumber(formatted);
       setCardType(type);
-      
+
       if (!isValid) {
         setErrors(prev => ({
           ...prev,
@@ -303,8 +301,8 @@ export function PaymentForm({ charity }: PaymentFormProps) {
 
   return (
     <>
-      <form 
-        onSubmit={handleSubmit} 
+      <form
+        onSubmit={handleSubmit}
         className="space-y-6"
         noValidate // Add this to prevent browser validation
       >
@@ -393,13 +391,13 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input 
-                    id="name" 
-                    placeholder="Enter your full name" 
+                  <Input
+                    id="name"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={handleNameChange}
                     className={cn("pl-10", errors.name && "border-red-500")}
-                    required 
+                    required
                   />
                   {errors.name && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -414,13 +412,13 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                 <Label htmlFor="phone">Egyptian Phone Number</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input 
-                    id="phone" 
-                    placeholder="01XXXXXXXXX" 
+                  <Input
+                    id="phone"
+                    placeholder="01XXXXXXXXX"
                     value={phone}
                     onChange={handlePhoneChange}
                     className={cn("pl-10", errors.phone && "border-red-500")}
-                    required 
+                    required
                   />
                   {errors.phone && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -447,13 +445,13 @@ export function PaymentForm({ charity }: PaymentFormProps) {
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Name on Card</Label>
-                <Input 
-                  id="name" 
-                  placeholder="John Smith" 
+                <Input
+                  id="name"
+                  placeholder="John Smith"
                   value={name}
                   onChange={handleNameChange}
                   className={cn(errors.name && "border-red-500")}
-                  required 
+                  required
                 />
                 {errors.name && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -474,9 +472,9 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                 </div>
                 <div className="relative">
                   <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input 
-                    id="card" 
-                    placeholder="1234 5678 9012 3456" 
+                  <Input
+                    id="card"
+                    placeholder="1234 5678 9012 3456"
                     value={cardNumber}
                     onChange={handleCardNumberChange}
                     className={cn(
@@ -485,7 +483,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                       !errors.cardNumber && cardNumber.replace(/\s/g, '').length === 16 && "border-green-500"
                     )}
                     maxLength={19}
-                    required 
+                    required
                   />
                   {!errors.cardNumber && cardNumber.replace(/\s/g, '').length === 16 && (
                     <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
@@ -502,9 +500,9 @@ export function PaymentForm({ charity }: PaymentFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="expiry">Expiry Date</Label>
-                  <Input 
-                    id="expiry" 
-                    placeholder="MM/YY" 
+                  <Input
+                    id="expiry"
+                    placeholder="MM/YY"
                     value={expiryDate}
                     onChange={handleExpiryDateChange}
                     className={cn(
@@ -512,7 +510,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                       !errors.expiryDate && expiryDate.length === 5 && isFutureDate(expiryDate) && "border-green-500"
                     )}
                     maxLength={5}
-                    required 
+                    required
                   />
                   {errors.expiryDate && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -523,9 +521,9 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="cvc">CVC</Label>
-                  <Input 
-                    id="cvc" 
-                    placeholder="123" 
+                  <Input
+                    id="cvc"
+                    placeholder="123"
                     type="password"
                     value={cvc}
                     onChange={handleCVCChange}
@@ -534,7 +532,7 @@ export function PaymentForm({ charity }: PaymentFormProps) {
                       !errors.cvc && cvc.length === 3 && "border-green-500"
                     )}
                     maxLength={3}
-                    required 
+                    required
                   />
                   {errors.cvc && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -549,9 +547,9 @@ export function PaymentForm({ charity }: PaymentFormProps) {
         )}
 
         <div className="pt-4">
-          <Button 
-            type="submit" 
-            className="w-full h-12 text-base font-medium" 
+          <Button
+            type="submit"
+            className="w-full h-12 text-base font-medium"
             disabled={isProcessing}
           >
             {isProcessing ? (

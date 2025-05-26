@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { ErrorBoundary } from "react-error-boundary"

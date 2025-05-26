@@ -1,4 +1,3 @@
-"use client"
 import {
   ArrowLeft,
   Shield,
@@ -19,11 +18,11 @@ import { useNavigate } from "react-router-dom"
 
 const BackButton = () => {
   const navigate = useNavigate();
-  
+
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
+    <Button
+      variant="ghost"
+      size="icon"
       className="mr-2"
       onClick={() => navigate(-1)}
     >
