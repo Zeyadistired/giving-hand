@@ -12,10 +12,8 @@ export default function Login() {
           <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 relative">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_20%,#ffffff_0%,transparent_60%)]"></div>
             <div className="h-full flex items-center justify-center p-8">
-              <div className="text-white max-w-md space-y-4 z-10">
-                <h1 className="text-3xl font-bold">Welcome Back</h1>
-                <p className="text-emerald-100">Sign in to your account to continue your journey with us.</p>
-                <div className="pt-4">
+              <div className="text-white max-w-md space-y-6 z-10">
+                <div className="flex items-center justify-center h-full">
                   <img
                     src="/lovable-uploads/login1.webp"
                     alt="Login Illustration"
@@ -55,4 +53,4 @@ export default function Login() {
       <BottomNav userRole="guest" hideHelp={true} hideHome={true} />
     </div>
   );
-} 
+}

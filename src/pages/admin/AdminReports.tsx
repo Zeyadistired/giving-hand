@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, TrendingUp, Users, Package, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
 import { DateRangeFilter } from "@/components/admin/analytics/DateRangeFilter";
 import { ExportOptions } from "@/components/admin/analytics/ExportOptions";
@@ -15,6 +16,7 @@ import { SubscriptionsTable, Subscription } from "@/components/admin/analytics/S
 import { OrganizationReportsTable, OrganizationReport } from "@/components/admin/analytics/OrganizationReportsTable";
 import { OrganizationActivityChart } from "@/components/admin/analytics/OrganizationActivityChart";
 import { toast } from "sonner";
+import { getAdminStats, getDetailedAnalytics, AdminStats, DetailedAnalytics } from "@/utils/admin";
 
 const mockSummaryData = {
   totalUsers: 256,
@@ -72,71 +74,71 @@ const mockSubscriptionsData: Subscription[] = [
 ];
 
 const mockOrganizationReportsData: OrganizationReport[] = [
-  { 
-    id: "org1", 
-    name: "Cairo Grand Hotel", 
-    type: "hotel", 
-    totalDonations: 87, 
-    quantity: 432, 
-    pickups: 81, 
-    cancellations: 6, 
-    violations: 0, 
-    lastActive: "2025-04-15" 
+  {
+    id: "org1",
+    name: "Cairo Grand Hotel",
+    type: "hotel",
+    totalDonations: 87,
+    quantity: 432,
+    pickups: 81,
+    cancellations: 6,
+    violations: 0,
+    lastActive: "2025-04-15"
   },
-  { 
-    id: "org2", 
-    name: "Fresh Valley Market", 
-    type: "supermarket", 
-    totalDonations: 124, 
-    quantity: 896, 
-    pickups: 112, 
-    cancellations: 12, 
-    violations: 2, 
-    lastActive: "2025-04-18" 
+  {
+    id: "org2",
+    name: "Fresh Valley Market",
+    type: "supermarket",
+    totalDonations: 124,
+    quantity: 896,
+    pickups: 112,
+    cancellations: 12,
+    violations: 2,
+    lastActive: "2025-04-18"
   },
-  { 
-    id: "org3", 
-    name: "Nile View Restaurant", 
-    type: "restaurant", 
-    totalDonations: 63, 
-    quantity: 215, 
-    pickups: 58, 
-    cancellations: 5, 
-    violations: 1, 
-    lastActive: "2025-04-20" 
+  {
+    id: "org3",
+    name: "Nile View Restaurant",
+    type: "restaurant",
+    totalDonations: 63,
+    quantity: 215,
+    pickups: 58,
+    cancellations: 5,
+    violations: 1,
+    lastActive: "2025-04-20"
   },
-  { 
-    id: "org4", 
-    name: "Pyramid Plaza Hotel", 
-    type: "hotel", 
-    totalDonations: 41, 
-    quantity: 187, 
-    pickups: 38, 
-    cancellations: 3, 
-    violations: 0, 
-    lastActive: "2025-04-17" 
+  {
+    id: "org4",
+    name: "Pyramid Plaza Hotel",
+    type: "hotel",
+    totalDonations: 41,
+    quantity: 187,
+    pickups: 38,
+    cancellations: 3,
+    violations: 0,
+    lastActive: "2025-04-17"
   },
-  { 
-    id: "org5", 
-    name: "Al Qasr Bakery", 
-    type: "restaurant", 
-    totalDonations: 29, 
-    quantity: 102, 
-    pickups: 25, 
-    cancellations: 4, 
-    violations: 3, 
-    lastActive: "2025-04-12" 
+  {
+    id: "org5",
+    name: "Al Qasr Bakery",
+    type: "restaurant",
+    totalDonations: 29,
+    quantity: 102,
+    pickups: 25,
+    cancellations: 4,
+    violations: 3,
+    lastActive: "2025-04-12"
   },
-  { 
-    id: "org6", 
-    name: "Oasis Community Shelter", 
-    type: "shelter", 
-    totalDonations: 18, 
-    quantity: 320, 
-    pickups: 18, 
-    cancellations: 0, 
-    violations: 0, 
-    lastActive: "2025-04-19" 
+  {
+    id: "org6",
+    name: "Oasis Community Shelter",
+    type: "shelter",
+    totalDonations: 18,
+    quantity: 320,
+    pickups: 18,
+    cancellations: 0,
+    violations: 0,
+    lastActive: "2025-04-19"
   },
 ];
 
@@ -183,20 +185,47 @@ export default function AdminReports() {
     to: new Date(),
   });
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [detailedAnalytics, setDetailedAnalytics] = useState<DetailedAnalytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const userString = localStorage.getItem('currentUser');
-    if (!userString) {
-      navigate('/login');
-      return;
-    }
-    
-    const user = JSON.parse(userString);
-    setCurrentUser(user);
-    
-    if (user.type !== 'admin') {
-      navigate('/login');
-    }
+    const loadReportsData = async () => {
+      try {
+        setIsLoading(true);
+
+        const userString = localStorage.getItem('currentUser');
+        if (!userString) {
+          navigate('/login');
+          return;
+        }
+
+        const user = JSON.parse(userString);
+        setCurrentUser(user);
+
+        if (user.type !== 'admin') {
+          navigate('/login');
+          return;
+        }
+
+        // Load admin statistics and detailed analytics
+        const [stats, analytics] = await Promise.all([
+          getAdminStats(),
+          getDetailedAnalytics()
+        ]);
+
+        setAdminStats(stats);
+        setDetailedAnalytics(analytics);
+
+      } catch (error) {
+        console.error('Error loading reports data:', error);
+        toast.error('Failed to load reports data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadReportsData();
   }, [navigate]);
 
   const handleExport = (type: "pdf" | "csv", reportType: string = "all") => {
@@ -207,82 +236,217 @@ export default function AdminReports() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 sm:p-8">
-      <header className="bg-primary text-white p-6 shadow-md rounded-lg mb-8">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate('/admin/dashboard')}
-              className="text-white hover:bg-white/10"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-bold">Analytics Reports</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span>{currentUser?.name}</span>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/admin/dashboard')}
+                className="text-gray-600 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-xl font-bold text-gray-900">Analytics Reports</h1>
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-600 font-medium">Welcome, {currentUser?.name}</span>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto space-y-12">
+      <main className="container mx-auto py-8 px-4 space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 bg-card p-6 rounded-lg shadow-sm">
           <h2 className="text-2xl font-bold w-full text-center sm:text-left">System Analytics Dashboard</h2>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center sm:justify-end">
-            <DateRangeFilter 
-              dateRange={dateRange} 
-              onDateRangeChange={setDateRange} 
-              className="mb-2 sm:mb-0 w-full sm:w-auto" 
+            <DateRangeFilter
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              className="mb-2 sm:mb-0 w-full sm:w-auto"
             />
-            <ExportOptions 
-              onExport={handleExport} 
-              className="w-full sm:w-auto" 
+            <ExportOptions
+              onExport={handleExport}
+              className="w-full sm:w-auto"
             />
           </div>
         </div>
 
-        <div className="space-y-16">
-          <div className="bg-card p-6 rounded-lg shadow-sm">
-            <AnalyticsSummary data={mockSummaryData} />
+        {isLoading ? (
+          <div className="space-y-8">
+            {/* Loading skeleton */}
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-gray-200 rounded mb-4 w-1/4"></div>
+                  <div className="h-32 bg-gray-200 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        ) : adminStats && detailedAnalytics ? (
+          <div className="space-y-8">
+            {/* Real-time Statistics Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Users className="h-8 w-8 text-blue-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Total Users</p>
+                      <p className="text-2xl font-bold text-gray-900">{adminStats.totalUsers}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="bg-card p-6 rounded-lg shadow-sm">
-            <OrganizationReportsTable data={mockOrganizationReportsData} />
-          </div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Package className="h-8 w-8 text-green-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Food Tickets</p>
+                      <p className="text-2xl font-bold text-gray-900">{adminStats.totalFoodTickets}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="bg-card p-6 rounded-lg shadow-sm h-[700px]">
-            <OrganizationActivityChart data={mockOrganizationActivityData} />
-          </div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <TrendingUp className="h-8 w-8 text-purple-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Acceptance Rate</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {adminStats.totalFoodTickets > 0
+                          ? Math.round((adminStats.acceptedTickets / adminStats.totalFoodTickets) * 100)
+                          : 0}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="bg-card p-6 rounded-lg shadow-sm h-[400px]">
-              <UsersByTypeChart data={mockUsersTypeData} />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <DollarSign className="h-8 w-8 text-orange-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Total Donations</p>
+                      <p className="text-2xl font-bold text-gray-900">EGP {adminStats.totalDonationAmount.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <div className="bg-card p-6 rounded-lg shadow-sm h-[400px]">
-              <TicketsActivityChart data={mockTicketsData} />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="bg-card p-6 rounded-lg shadow-sm h-[400px]">
-              <DonationTrendsChart data={mockDonationsData} />
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow-sm h-[400px]">
-              <ImpactMetricsCard data={mockImpactData} />
-            </div>
-          </div>
+            {/* Organization Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Organizations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {detailedAnalytics.organizationActivity.slice(0, 5).map((org, index) => (
+                    <div key={org.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-blue-600">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{org.name}</p>
+                          <p className="text-sm text-gray-600">{org.tickets} tickets created</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">{org.accepted} accepted</p>
+                        <p className="text-sm text-gray-600">
+                          {org.tickets > 0 ? Math.round((org.accepted / org.tickets) * 100) : 0}% rate
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div className="bg-card p-6 rounded-lg shadow-sm">
-              <SubscriptionsTable data={mockSubscriptionsData} />
-            </div>
-            <div className="bg-card p-6 rounded-lg shadow-sm">
-              <PromoCodesTable data={mockPromoCodesData} />
-            </div>
+            {/* Food Categories */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Food Categories Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {detailedAnalytics.topCategories.map((category) => (
+                    <div key={category.category} className="p-4 bg-gray-50 rounded-lg">
+                      <h3 className="font-medium capitalize">{category.category}</h3>
+                      <p className="text-2xl font-bold text-primary">{category.count}</p>
+                      <p className="text-sm text-gray-600">{category.weight.toFixed(1)} kg total</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Additional Analytics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>System Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h3 className="font-medium text-blue-900">Active Users</h3>
+                    <p className="text-2xl font-bold text-blue-600">{adminStats.totalUsers}</p>
+                    <p className="text-sm text-blue-600">Total registered</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <h3 className="font-medium text-green-900">Food Saved</h3>
+                    <p className="text-2xl font-bold text-green-600">{adminStats.totalFoodTickets}</p>
+                    <p className="text-sm text-green-600">Tickets created</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h3 className="font-medium text-purple-900">Money Raised</h3>
+                    <p className="text-2xl font-bold text-purple-600">EGP {adminStats.totalDonationAmount.toFixed(2)}</p>
+                    <p className="text-sm text-purple-600">Total donations</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Export and Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Reports</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  <Button onClick={() => handleExport('csv')} variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Button onClick={() => handleExport('pdf')} variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </Button>
+                  <Button onClick={() => handleExport('excel')} variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Excel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-500">No data available</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

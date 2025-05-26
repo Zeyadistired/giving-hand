@@ -22,11 +22,11 @@ export function LoginForm() {
 
     try {
       const user = await signIn(email, password);
-      
+
       // Store user session
       localStorage.setItem('currentUser', JSON.stringify(user));
       localStorage.setItem('userRole', user.type);
-      
+
       // Navigate based on user type
       switch (user.type) {
         case 'charity':
@@ -44,7 +44,7 @@ export function LoginForm() {
         default:
           navigate('/');
       }
-      
+
       toast.success('Successfully logged in!');
     } catch (error: any) {
       console.error('Login error:', error);
@@ -62,15 +62,14 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col items-center justify-center px-6 py-8 w-full max-w-md mx-auto">
-      <h1 className="text-3xl font-bold text-emerald-600 mb-2">Welcome Back</h1>
-      <p className="text-gray-600 mb-8">Sign in to your account</p>
-      
+      <h1 className="text-3xl font-bold text-emerald-600 mb-8">Welcome Back</h1>
+
       {error && (
         <div className="w-full p-3 mb-5 bg-red-50 text-red-700 rounded-md text-sm">
           {error}
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="w-full space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-gray-700">Email</Label>
@@ -84,7 +83,7 @@ export function LoginForm() {
             className="border-gray-200 focus:border-emerald-500 focus:ring-emerald-500"
           />
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between">
             <Label htmlFor="password" className="text-gray-700">Password</Label>
@@ -112,7 +111,7 @@ export function LoginForm() {
             </button>
           </div>
         </div>
-        
+
         <Button
           type="submit"
           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-md py-2"
@@ -120,7 +119,7 @@ export function LoginForm() {
         >
           {isLoading ? 'Signing in...' : 'Sign In'}
         </Button>
-        
+
         <div className="text-center text-sm mt-6">
           <span className="text-gray-600">Don't have an account? </span>
           <Link to="/register" className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium">

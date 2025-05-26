@@ -6,96 +6,144 @@ import { FoodTicketCard } from "@/components/tickets/food-ticket-card";
 import { Badge } from "@/components/ui/badge";
 import { FoodTicket } from "@/types";
 import { getFoodTickets } from "@/utils/tickets";
+import { getCurrentUser } from "@/utils/auth";
+import { toast } from "sonner";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function Notifications() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<FoodTicket[]>([]);
-  
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const loadTickets = async () => {
+    const loadData = async () => {
       try {
-        // Try to load from Supabase first
-        const charityTickets = await getFoodTickets({
-          excludeExpiry: true, // Exclude expiry food
-          status: 'pending' // Only show pending tickets
-        });
-        
-        if (charityTickets) {
-          setTickets(charityTickets);
-          return;
-        }
-        
-        // Fallback to localStorage
-        const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-        console.log("Loaded tickets from localStorage:", loadedTickets);
-        
-        // Filter out expiry food tickets
-        const filteredTickets = loadedTickets.filter((ticket: FoodTicket) => 
-          ticket.foodType !== 'expiry' && 
-          ticket.deliveryCapability !== "factory-only" &&
-          ticket.status !== 'expired'
-        );
-        
-        setTickets(filteredTickets);
+        setIsLoading(true);
+
+        // Get current user
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+
+        // Load tickets from database
+        const allTickets = await getFoodTickets({ status: 'pending' });
+        setTickets(allTickets);
       } catch (error) {
         console.error("Error loading tickets:", error);
-        // Fallback to localStorage with filtering
-        // ...
+        toast.error("Failed to load tickets");
+        setTickets([]);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    loadTickets();
+
+    loadData();
   }, []);
-  
-  const handleAcceptTicket = (ticketId: string) => {
-    setTickets(prevTickets => 
-      prevTickets.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, status: "accepted", acceptedBy: "Your Charity" } 
-          : ticket
-      )
-    );
-    
-    // Update localStorage
-    const updatedTickets = tickets.map(ticket => 
-      ticket.id === ticketId 
-        ? { ...ticket, status: "accepted", acceptedBy: "Your Charity" } 
-        : ticket
-    );
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-    
-    // In a real app, we would navigate to delivery options
-    // For now, we'll just show a delay and then navigate to the details
-    setTimeout(() => {
-      navigate(`/ticket/${ticketId}`);
-    }, 500);
+
+  const handleAcceptTicket = async (ticketId: string) => {
+    if (!currentUser) {
+      toast.error("Please log in to accept tickets");
+      return;
+    }
+
+    try {
+      console.log("=== ACCEPT TICKET ATTEMPT ===");
+      console.log("Ticket ID:", ticketId);
+      console.log("Current User:", currentUser);
+
+      // Use direct Supabase update to ensure it works
+      const { data: updatedTicket, error } = await supabase
+        .from('food_tickets')
+        .update({
+          status: 'accepted',
+          accepted_by: currentUser.id
+        })
+        .eq('id', ticketId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw new Error(`Update failed: ${error.message}`);
+      }
+
+      console.log("✅ Ticket updated successfully:", updatedTicket);
+
+      // Update local state to remove the ticket from pending list
+      setTickets(prevTickets =>
+        prevTickets.filter(ticket => ticket.id !== ticketId)
+      );
+
+      toast.success("Ticket accepted successfully!");
+
+      // Navigate to ticket details after a short delay
+      setTimeout(() => {
+        navigate(`/ticket/${ticketId}`);
+      }, 500);
+
+    } catch (error) {
+      console.error("=== ACCEPT TICKET ERROR ===");
+      console.error("Error accepting ticket:", error);
+      toast.error("Failed to accept ticket. Please try again.");
+    }
   };
-  
-  const handleDeclineTicket = (ticketId: string) => {
-    setTickets(prevTickets => 
-      prevTickets.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, status: "declined" } 
-          : ticket
-      )
-    );
-    
-    // Update localStorage
-    const updatedTickets = tickets.map(ticket => 
-      ticket.id === ticketId 
-        ? { ...ticket, status: "declined" } 
-        : ticket
-    );
-    localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
+
+  const handleDeclineTicket = async (ticketId: string) => {
+    if (!currentUser) {
+      toast.error("Please log in to decline tickets");
+      return;
+    }
+
+    try {
+      console.log("=== DECLINE TICKET ATTEMPT ===");
+      console.log("Ticket ID:", ticketId);
+
+      // Use direct Supabase update to ensure it works
+      const { data: updatedTicket, error } = await supabase
+        .from('food_tickets')
+        .update({ status: 'declined' })
+        .eq('id', ticketId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw new Error(`Update failed: ${error.message}`);
+      }
+
+      console.log("✅ Ticket declined successfully:", updatedTicket);
+
+      // Update local state to remove the ticket from pending list
+      setTickets(prevTickets =>
+        prevTickets.filter(ticket => ticket.id !== ticketId)
+      );
+
+      toast.success("Ticket declined");
+
+    } catch (error) {
+      console.error("=== DECLINE TICKET ERROR ===");
+      console.error("Error declining ticket:", error);
+      toast.error("Failed to decline ticket. Please try again.");
+    }
   };
-  
+
   const handleViewTicket = (ticketId: string) => {
     navigate(`/ticket/${ticketId}`);
   };
-  
+
   const pendingTickets = tickets.filter(ticket => ticket.status === "pending");
-  const acceptedTickets = tickets.filter(ticket => ticket.status === "accepted");
-  
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-charity-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading notifications...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-10 bg-white border-b px-4 py-3">
@@ -111,47 +159,25 @@ export default function Notifications() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-charity-primary mb-1">Notifications</h1>
           <p className="text-muted-foreground">
-            {pendingTickets.length > 0 
-              ? `You have ${pendingTickets.length} new food donation tickets` 
+            {pendingTickets.length > 0
+              ? `You have ${pendingTickets.length} new food donation tickets`
               : "No new food donation tickets"}
           </p>
         </div>
 
-        {pendingTickets.length > 0 && (
-          <div className="mb-8">
-            <h2 className="font-medium mb-4">New Tickets</h2>
-            <div className="space-y-4">
-              {pendingTickets.map(ticket => (
-                <FoodTicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  onAccept={handleAcceptTicket}
-                  onDecline={handleDeclineTicket}
-                  onView={handleViewTicket}
-                />
-              ))}
-            </div>
+        {pendingTickets.length > 0 ? (
+          <div className="space-y-4">
+            {pendingTickets.map(ticket => (
+              <FoodTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onAccept={handleAcceptTicket}
+                onDecline={handleDeclineTicket}
+                onView={handleViewTicket}
+              />
+            ))}
           </div>
-        )}
-        
-        {acceptedTickets.length > 0 && (
-          <div>
-            <h2 className="font-medium mb-4">Accepted Tickets</h2>
-            <div className="space-y-4">
-              {acceptedTickets.map(ticket => (
-                <FoodTicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  onAccept={handleAcceptTicket}
-                  onDecline={handleDeclineTicket}
-                  onView={handleViewTicket}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {tickets.length === 0 && (
+        ) : (
           <div className="text-center py-12">
             <Bell className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-500 mb-1">No Notifications</h3>
