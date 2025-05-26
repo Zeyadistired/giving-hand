@@ -47,7 +47,6 @@ import FactoryHelp from "./pages/factory/FactoryHelp";
 import FactorySettings from "./pages/factory/FactorySettings";
 import FactoryTicketDetail from "./pages/factory/FactoryTicketDetail";
 import { initializeDatabase } from "./utils/initializeDatabase";
-import { useNavigationHistory } from "./hooks/useNavigationHistory";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,9 +58,6 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  // Initialize the navigation history tracker
-  useNavigationHistory();
-  
   // Initialize database on app startup
   useEffect(() => {
     initializeDatabase();

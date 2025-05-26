@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { FoodTicket, DeliveryMethod, OrgDeliveryCapability } from "@/types";
-import { updateFoodTicket, getFoodTickets } from "@/utils/tickets";
+import { updateFoodTicket, getFoodTicketsEnhanced } from "@/utils/tickets";
 import { getCurrentUser } from "@/utils/auth";
 import { toast } from "sonner";
 
@@ -65,7 +65,7 @@ export default function TicketDetail() {
 
         if (orgId) {
           // Load tickets for specific organization
-          const allTickets = await getFoodTickets();
+          const allTickets = await getFoodTicketsEnhanced();
           const filteredTickets = allTickets
             .filter(t => t.organizationId === orgId)
             .map(t => ({
@@ -77,7 +77,7 @@ export default function TicketDetail() {
         } else if (ticketId) {
           // Load specific ticket
           try {
-            const allTickets = await getFoodTickets();
+            const allTickets = await getFoodTicketsEnhanced();
             const foundTicket = allTickets.find(t => t.id === ticketId);
 
             if (foundTicket) {
