@@ -103,11 +103,11 @@ export const getFoodTickets = async (filters?: {
 }) => {
   try {
     console.log("Getting food tickets with filters:", filters);
-    
+
     let query = supabase
       .from('food_tickets')
       .select('*');
-    
+
     if (filters) {
       if (filters.organizationId) {
         query = query.eq('organization_id', filters.organizationId);
@@ -124,25 +124,25 @@ export const getFoodTickets = async (filters?: {
       if (filters.conversionStatus) {
         query = query.eq('conversion_status', filters.conversionStatus);
       }
-      
+
       // CRITICAL FIX: Properly filter by food_type
       if (filters.foodType) {
         console.log("Filtering by food_type:", filters.foodType);
         query = query.eq('food_type', filters.foodType);
       }
-      
+
       if (filters.excludeExpiry) {
         query = query.neq('food_type', 'expiry');
       }
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error('Error fetching food tickets:', error);
       throw error;
     }
-    
+
     console.log("Food tickets fetched:", data);
     return data || [];
   } catch (error) {
@@ -152,15 +152,31 @@ export const getFoodTickets = async (filters?: {
 };
 
 export const updateFoodTicket = async (ticketId: string, updates: Partial<FoodTicket>) => {
-  const { data, error } = await supabase
-    .from('food_tickets')
-    .update(updates)
-    .eq('id', ticketId)
-    .select()
-    .single();
+  try {
+    console.log("Updating food ticket:", ticketId, "with updates:", updates);
 
-  if (error) throw error;
-  return data;
+    // Transform camelCase updates to snake_case for database
+    const transformedUpdates = transformToSnakeCase(updates);
+    console.log("Transformed updates:", transformedUpdates);
+
+    const { data, error } = await supabase
+      .from('food_tickets')
+      .update(transformedUpdates)
+      .eq('id', ticketId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Database update error:", error);
+      throw error;
+    }
+
+    console.log("Update successful:", data);
+    return data;
+  } catch (error) {
+    console.error("Error in updateFoodTicket:", error);
+    throw error;
+  }
 };
 
 export const createDeliveryRequest = async (request: {
@@ -238,7 +254,7 @@ export const createFactoryRequest = async (request: {
 }) => {
   try {
     console.log("Creating factory request with data:", request);
-    
+
     // Verify the factory_requests table exists
     try {
       const { data, error } = await supabase
@@ -254,7 +270,7 @@ export const createFactoryRequest = async (request: {
     } catch (tableError) {
       console.error('Error checking factory_requests table:', tableError);
     }
-    
+
     // Insert the factory request with explicit field mapping
     const { data, error } = await supabase
       .from('factory_requests')
@@ -277,7 +293,7 @@ export const createFactoryRequest = async (request: {
       console.error('Error creating factory request:', error);
       throw error;
     }
-    
+
     console.log('Factory request created successfully:', data);
     return data[0];
   } catch (error) {
@@ -359,10 +375,10 @@ export const getFoodTicketsEnhanced = async (filters?: {
   try {
     // Use the existing getFoodTickets function
     const tickets = await getFoodTickets(filters);
-    
+
     // Transform the snake_case keys to camelCase for frontend use
     const enhancedTickets = tickets.map((ticket: any) => transformToCamelCase(ticket));
-    
+
     return enhancedTickets;
   } catch (error) {
     console.error('Error in getFoodTicketsEnhanced:', error);

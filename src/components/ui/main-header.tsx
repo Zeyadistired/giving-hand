@@ -22,14 +22,14 @@ export function MainHeader() {
 
   const isAuthScreen = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password";
   const showLogout = !isAuthScreen && isLoggedIn();
-  
+
   return (
     <header className="w-full bg-background border-b border-border sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-20">
-        
-       
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between h-16 sm:h-20">
+
+
           <Logo size="md" showText={true} />
-        
+
         <nav className="flex items-center gap-2 sm:gap-4 lg:gap-6">
           {navLinks.map((link) => (
             <Button
@@ -48,8 +48,8 @@ export function MainHeader() {
             </Button>
           ))}
           {showLogout && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={handleLogout}
               className="text-sm sm:text-base font-medium"
             >

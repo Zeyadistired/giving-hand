@@ -119,20 +119,20 @@ export function BottomNav({ userRole, hideHelp, hideHome }: BottomNavProps) {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 bg-white border-t z-50">
-      <div className="container max-w-md flex items-center justify-around p-2">
+      <div className="container max-w-md flex items-center justify-around p-3 sm:p-2">
         {navItems.map((item) => (
           <Link
             key={item.label}
             to={item.href}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 text-sm",
+              "flex flex-col items-center justify-center gap-1 text-xs sm:text-sm min-w-0 px-1",
               item.active
                 ? "text-charity-primary"
                 : "text-gray-500 hover:text-gray-700"
             )}
           >
-            <item.icon className="h-5 w-5" />
-            <span>{item.label}</span>
+            <item.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="truncate">{item.label}</span>
           </Link>
         ))}
       </div>

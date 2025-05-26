@@ -204,18 +204,18 @@ function GuestHomeContent() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-6 pb-20 max-w-5xl mx-auto w-full">
+      <main className="flex-1 px-3 sm:px-4 py-4 sm:py-6 pb-20 max-w-5xl mx-auto w-full">
         {/* Hero Section */}
         <div className="relative rounded-2xl overflow-hidden mb-8 shadow-lg">
           <img
             src="/lovable-uploads/money.jpeg"
             alt="Charity Banner"
-            className="w-full h-64 object-cover object-[center_55%]"
+            className="w-full h-48 sm:h-64 object-cover object-[center_55%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4 sm:p-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <h1 className="text-3xl font-bold text-white mb-2">Make a Difference Today</h1>
-              <p className="text-white/90 max-w-md">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Make a Difference Today</h1>
+              <p className="text-sm sm:text-base text-white/90 max-w-md">
                 Your donation can change lives. Choose a charity and start your journey of giving.
               </p>
             </motion.div>
@@ -304,7 +304,7 @@ function GuestHomeContent() {
           >
             <Button
               onClick={handleProceedToPayment}
-              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl py-6 text-lg font-medium flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl py-4 sm:py-6 text-base sm:text-lg font-medium flex items-center justify-center gap-2"
             >
               Proceed to Payment
               <ChevronRight className="h-5 w-5" />

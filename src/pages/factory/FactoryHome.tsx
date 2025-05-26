@@ -17,6 +17,7 @@ export default function FactoryHome() {
   const [pendingTickets, setPendingTickets] = useState<FoodTicket[]>([]);
   const [acceptedTickets, setAcceptedTickets] = useState<FoodTicket[]>([]);
   const [convertedTickets, setConvertedTickets] = useState<FoodTicket[]>([]);
+  const [rejectedTickets, setRejectedTickets] = useState<FoodTicket[]>([]);
   const [factory, setFactory] = useState({
     name: "",
     id: ""
@@ -72,7 +73,10 @@ export default function FactoryHome() {
         console.log("Filtered factory tickets:", factoryTickets);
 
         setPendingTickets(factoryTickets.filter((t: FoodTicket) =>
-          (t.conversionStatus === "pending" || !t.conversionStatus) && t.status !== "accepted"
+          (t.conversionStatus === "pending" || !t.conversionStatus) &&
+          t.status !== "accepted" &&
+          t.status !== "declined" &&
+          t.conversionStatus !== "rejected"
         ));
 
         setAcceptedTickets(factoryTickets.filter((t: FoodTicket) =>
@@ -81,6 +85,10 @@ export default function FactoryHome() {
 
         setConvertedTickets(factoryTickets.filter((t: FoodTicket) =>
           t.conversionStatus === "converted"
+        ));
+
+        setRejectedTickets(factoryTickets.filter((t: FoodTicket) =>
+          t.status === "declined" || t.conversionStatus === "rejected"
         ));
 
         // CRITICAL: Also load factory_requests from Supabase to ensure data consistency
@@ -93,7 +101,7 @@ export default function FactoryHome() {
           console.error("Error loading factory requests:", error);
         } else {
           console.log("Factory requests loaded from database:", factoryRequests);
-          
+
           // Update local state based on factory_requests if needed
           // This ensures the UI reflects the actual database state
           if (factoryRequests && factoryRequests.length > 0) {
@@ -105,7 +113,7 @@ export default function FactoryHome() {
                 setPendingTickets(prev => prev.filter(t => t.id !== request.ticket_id));
                 setAcceptedTickets(prev => prev.filter(t => t.id !== request.ticket_id));
               }
-              
+
               // If a request is marked as converted in factory_requests
               if (request.conversion_status === 'converted') {
                 // Ensure it's in the converted tickets list
@@ -131,24 +139,30 @@ export default function FactoryHome() {
         console.error("Error loading tickets from database:", error);
         // Fallback to localStorage
         const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-        
+
         // Filter for factory tickets - only show expiry food
         const factoryTickets = loadedTickets.filter((ticket: FoodTicket) =>
           ticket.foodType === 'expiry' ||
           ticket.deliveryCapability === "factory-only" ||
           ticket.isExpired === true
         );
-        
-        setPendingTickets(factoryTickets.filter((t: FoodTicket) => 
-          t.status === "pending" || !t.status
+
+        setPendingTickets(factoryTickets.filter((t: FoodTicket) =>
+          (t.status === "pending" || !t.status) &&
+          t.status !== "declined" &&
+          t.conversionStatus !== "rejected"
         ));
-        
-        setAcceptedTickets(factoryTickets.filter((t: FoodTicket) => 
+
+        setAcceptedTickets(factoryTickets.filter((t: FoodTicket) =>
           t.status === "accepted" && t.factoryId === currentUser.id
         ));
-        
-        setConvertedTickets(factoryTickets.filter((t: FoodTicket) => 
+
+        setConvertedTickets(factoryTickets.filter((t: FoodTicket) =>
           t.conversionStatus === "converted" && t.factoryId === currentUser.id
+        ));
+
+        setRejectedTickets(factoryTickets.filter((t: FoodTicket) =>
+          (t.status === "declined" || t.conversionStatus === "rejected") && t.factoryId === currentUser.id
         ));
       }
     } catch (error) {
@@ -248,6 +262,11 @@ export default function FactoryHome() {
       }
 
       setPendingTickets(prev => prev.filter(t => t.id !== ticketId));
+      setRejectedTickets(prev => [...prev, {
+        ...ticketToReject,
+        status: "declined",
+        conversionStatus: "rejected"
+      }]);
       toast.info("Request rejected");
     } catch (error) {
       console.error("Error rejecting ticket:", error);
@@ -280,8 +299,8 @@ export default function FactoryHome() {
           .update({
             conversion_status: 'converted',
             conversion_date: new Date().toISOString(),
-            notes: existingRequests[0].notes 
-              ? `${existingRequests[0].notes}\n\nMarked as converted via factory dashboard` 
+            notes: existingRequests[0].notes
+              ? `${existingRequests[0].notes}\n\nMarked as converted via factory dashboard`
               : `Marked as converted via factory dashboard`
           })
           .eq("id", existingRequests[0].id);
@@ -356,8 +375,8 @@ export default function FactoryHome() {
           .update({
             conversion_status: 'rejected',
             conversion_date: new Date().toISOString(),
-            notes: existingRequests[0].notes 
-              ? `${existingRequests[0].notes}\n\nConversion rejected via factory dashboard` 
+            notes: existingRequests[0].notes
+              ? `${existingRequests[0].notes}\n\nConversion rejected via factory dashboard`
               : `Conversion rejected via factory dashboard`
           })
           .eq("id", existingRequests[0].id);
@@ -399,7 +418,10 @@ export default function FactoryHome() {
       }
 
       setAcceptedTickets(prev => prev.filter(t => t.id !== ticketId));
-      // Add to a new rejected tickets state if you want to display them
+      setRejectedTickets(prev => [...prev, {
+        ...updatedTicket,
+        conversionStatus: "rejected"
+      }]);
       toast.success("Food conversion rejected successfully");
     } catch (error) {
       console.error("Error rejecting conversion:", error);
@@ -523,7 +545,7 @@ export default function FactoryHome() {
                   <div className="text-xs text-gray-500 mb-1">
                     Debug: ShowButtons={String(ticketsWithVisibleButtons.includes(ticket.id))}
                   </div>
-                  
+
                   <FactoryTicketCard
                     ticket={ticket}
                     onAccept={() => handleAccept(ticket.id)}
@@ -568,7 +590,35 @@ export default function FactoryHome() {
           </div>
         )}
 
-        {pendingTickets.length === 0 && acceptedTickets.length === 0 && convertedTickets.length === 0 && (
+        {rejectedTickets.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-medium mb-4 flex items-center gap-2">
+              <span className="h-3 w-3 bg-red-500 rounded-full"></span>
+              Rejected Requests
+            </h2>
+            <div className="space-y-4">
+              {rejectedTickets.map(ticket => (
+                <motion.div
+                  key={ticket.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FactoryTicketCard
+                    ticket={ticket}
+                    onAccept={() => {}}
+                    onReject={() => {}}
+                    onMarkConverted={() => {}}
+                    onView={() => handleViewTicket(ticket.id)}
+                    status="rejected"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pendingTickets.length === 0 && acceptedTickets.length === 0 && convertedTickets.length === 0 && rejectedTickets.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-gray-100 h-20 w-20 flex items-center justify-center rounded-full mx-auto mb-4">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">

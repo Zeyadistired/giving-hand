@@ -61,8 +61,8 @@ export function LoginForm() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-8 w-full max-w-md mx-auto">
-      <h1 className="text-3xl font-bold text-emerald-600 mb-8">Welcome Back</h1>
+    <div className="flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full max-w-md mx-auto">
+      <h1 className="text-2xl sm:text-3xl font-bold text-emerald-600 mb-6 sm:mb-8">Welcome Back</h1>
 
       {error && (
         <div className="w-full p-3 mb-5 bg-red-50 text-red-700 rounded-md text-sm">
