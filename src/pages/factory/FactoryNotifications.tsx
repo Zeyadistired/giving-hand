@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { FoodTicket } from "@/types";
 import { getFoodTickets } from "@/utils/tickets";
 import { FactoryTicketCard } from "@/components/factory/factory-ticket-card";
+import { supabase } from "@/utils/supabaseClient";
+import { getUserSession } from "@/utils/auth";
 
 export default function FactoryNotifications() {
   const navigate = useNavigate();
@@ -14,13 +16,34 @@ export default function FactoryNotifications() {
   useEffect(() => {
     const loadTickets = async () => {
       try {
+        const currentUser = getUserSession();
+        if (!currentUser) {
+          console.error("No user session found");
+          navigate("/login");
+          return;
+        }
+
+        console.log("Loading factory tickets...");
         // Try to load from Supabase first
         const factoryTickets = await getFoodTickets({
-          foodType: 'expiry', // Only show expiry food
+          foodType: 'expiry', // CRITICAL: Only show expiry food
           status: 'pending' // Only show pending tickets
         });
         
-        if (factoryTickets) {
+        console.log("Factory tickets loaded:", factoryTickets);
+        
+        // Also load factory_requests to check which tickets have already been processed
+        const { data: factoryRequests, error: requestsError } = await supabase
+          .from('factory_requests')
+          .select('*')
+          .eq('factory_id', currentUser.id);
+        
+        if (requestsError) {
+          console.error("Error loading factory requests:", requestsError);
+          return;
+        }
+
+        if (factoryTickets && factoryTickets.length > 0) {
           setTickets(factoryTickets);
           return;
         }
@@ -37,6 +60,7 @@ export default function FactoryNotifications() {
           ticket.isExpired === true
         );
         
+        console.log("Filtered factory tickets:", filteredTickets);
         setTickets(filteredTickets);
       } catch (error) {
         console.error("Error loading tickets:", error);

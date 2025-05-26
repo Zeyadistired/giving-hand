@@ -16,6 +16,18 @@ const transformToSnakeCase = (obj: any) => {
   }, {});
 };
 
+// Helper function to convert snake_case to camelCase
+const toCamelCase = (str: string) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+// Helper function to transform object keys to camelCase
+const transformToCamelCase = (obj: any) => {
+  if (!obj) return obj;
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const camelKey = toCamelCase(key);
+    return { ...acc, [camelKey]: value };
+  }, {});
+};
+
 export const verifyFoodTicketsTable = async () => {
   const { data, error } = await supabase
     .from('food_tickets')
@@ -37,14 +49,18 @@ export const createFoodTicket = async (ticket: Omit<FoodTicket, 'id'>) => {
     // First verify the table exists
     await verifyFoodTicketsTable();
 
-    // Ensure food_type is properly set for filtering
+    // CRITICAL FIX: Ensure food_type is properly set for filtering
     if (ticket.deliveryCapability === "factory-only" ||
         ticket.isExpired === true ||
         new Date(ticket.expiryDate) < new Date()) {
       (transformedTicket as Record<string, any>).food_type = 'expiry';
+      console.log("Setting food_type to 'expiry' for factory processing");
     } else {
       (transformedTicket as Record<string, any>).food_type = 'regular';
     }
+
+    // Double-check food_type is set
+    console.log("Final food_type value:", (transformedTicket as Record<string, any>).food_type);
 
     // Ensure dates are properly formatted
     if (ticket.expiryDate) {
@@ -85,37 +101,54 @@ export const getFoodTickets = async (filters?: {
   foodType?: string;
   excludeExpiry?: boolean;
 }) => {
-  let query = supabase
-    .from('food_tickets')
-    .select('*');
-
-  if (filters) {
-    if (filters.organizationId) {
-      query = query.eq('organization_id', filters.organizationId);
+  try {
+    console.log("Getting food tickets with filters:", filters);
+    
+    let query = supabase
+      .from('food_tickets')
+      .select('*');
+    
+    if (filters) {
+      if (filters.organizationId) {
+        query = query.eq('organization_id', filters.organizationId);
+      }
+      if (filters.charityId) {
+        query = query.eq('accepted_by', filters.charityId);
+      }
+      if (filters.factoryId) {
+        query = query.eq('factory_id', filters.factoryId);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.conversionStatus) {
+        query = query.eq('conversion_status', filters.conversionStatus);
+      }
+      
+      // CRITICAL FIX: Properly filter by food_type
+      if (filters.foodType) {
+        console.log("Filtering by food_type:", filters.foodType);
+        query = query.eq('food_type', filters.foodType);
+      }
+      
+      if (filters.excludeExpiry) {
+        query = query.neq('food_type', 'expiry');
+      }
     }
-    if (filters.charityId) {
-      query = query.eq('charity_id', filters.charityId);
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching food tickets:', error);
+      throw error;
     }
-    if (filters.factoryId) {
-      query = query.eq('factory_id', filters.factoryId);
-    }
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.conversionStatus) {
-      query = query.eq('conversion_status', filters.conversionStatus);
-    }
-    if (filters.foodType) {
-      query = query.eq('food_type', filters.foodType);
-    }
-    if (filters.excludeExpiry) {
-      query = query.not('food_type', 'eq', 'expiry');
-    }
+    
+    console.log("Food tickets fetched:", data);
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFoodTickets:', error);
+    throw error;
   }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
 };
 
 export const updateFoodTicket = async (ticketId: string, updates: Partial<FoodTicket>) => {
@@ -203,26 +236,54 @@ export const createFactoryRequest = async (request: {
   status: 'accepted' | 'declined';
   notes?: string;
 }) => {
-  const { data, error } = await supabase
-    .from('factory_requests')
-    .insert([{
-      ticket_id: request.ticketId,
-      factory_id: request.factoryId,
-      factory_name: request.factoryName,
-      organization_id: request.organizationId,
-      organization_name: request.organizationName,
-      food_type: request.foodType,
-      weight: request.weight,
-      status: request.status,
-      conversion_status: request.status === 'accepted' ? 'pending' : 'rejected',
-      notes: request.notes || null,
-      request_date: new Date().toISOString()
-    }])
-    .select()
-    .single();
+  try {
+    console.log("Creating factory request with data:", request);
+    
+    // Verify the factory_requests table exists
+    try {
+      const { data, error } = await supabase
+        .from('factory_requests')
+        .select('*')
+        .limit(1);
 
-  if (error) throw error;
-  return data;
+      if (error && error.code === '42P01') {
+        console.error('factory_requests table does not exist:', error);
+        // Create the table if it doesn't exist
+        await supabase.rpc('create_factory_requests_table');
+      }
+    } catch (tableError) {
+      console.error('Error checking factory_requests table:', tableError);
+    }
+    
+    // Insert the factory request with explicit field mapping
+    const { data, error } = await supabase
+      .from('factory_requests')
+      .insert([{
+        ticket_id: request.ticketId,
+        factory_id: request.factoryId,
+        factory_name: request.factoryName,
+        organization_id: request.organizationId,
+        organization_name: request.organizationName,
+        food_type: request.foodType,
+        weight: request.weight,
+        status: request.status,
+        conversion_status: request.status === 'accepted' ? 'pending' : 'rejected',
+        notes: request.notes || null,
+        request_date: new Date().toISOString()
+      }])
+      .select();
+
+    if (error) {
+      console.error('Error creating factory request:', error);
+      throw error;
+    }
+    
+    console.log('Factory request created successfully:', data);
+    return data[0];
+  } catch (error) {
+    console.error('Failed to create factory request:', error);
+    throw error;
+  }
 };
 
 export const updateFactoryRequest = async (requestId: string, updates: {
@@ -284,4 +345,27 @@ export const getFactoryRequests = async (filters?: {
   const { data, error } = await query;
   if (error) throw error;
   return data;
+};
+
+export const getFoodTicketsEnhanced = async (filters?: {
+  organizationId?: string;
+  charityId?: string;
+  factoryId?: string;
+  status?: string;
+  conversionStatus?: string;
+  foodType?: string;
+  excludeExpiry?: boolean;
+}) => {
+  try {
+    // Use the existing getFoodTickets function
+    const tickets = await getFoodTickets(filters);
+    
+    // Transform the snake_case keys to camelCase for frontend use
+    const enhancedTickets = tickets.map((ticket: any) => transformToCamelCase(ticket));
+    
+    return enhancedTickets;
+  } catch (error) {
+    console.error('Error in getFoodTicketsEnhanced:', error);
+    throw error;
+  }
 };

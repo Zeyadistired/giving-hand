@@ -9,17 +9,21 @@ interface FactoryTicketCardProps {
   onAccept: () => void;
   onReject: () => void;
   onMarkConverted: () => void;
+  onRejectConversion?: () => void; // New prop for rejecting conversion
   onView: () => void;
-  status: "pending" | "accepted" | "converted";
+  status: "pending" | "accepted" | "converted" | "rejected"; // Added rejected status
+  showConversionButtons?: boolean; // New prop to control visibility
 }
 
 export function FactoryTicketCard({ 
   ticket, 
   onAccept, 
   onReject, 
-  onMarkConverted, 
+  onMarkConverted,
+  onRejectConversion,
   onView, 
-  status 
+  status,
+  showConversionButtons = false // Default to hidden
 }: FactoryTicketCardProps) {
   // Helper function to safely format dates
   const formatDate = (dateString: string | null | undefined) => {
@@ -32,8 +36,16 @@ export function FactoryTicketCard({
     }
   };
 
+  // Debug log to check status and showConversionButtons values
+  console.log("FactoryTicketCard Debug:", { 
+    ticketId: ticket.id,
+    ticketStatus: ticket.status, 
+    componentStatus: status,
+    showButtons: showConversionButtons 
+  });
+
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-4 bg-white relative group">
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className="font-medium text-charity-primary">{ticket.foodType}</h3>
@@ -53,6 +65,11 @@ export function FactoryTicketCard({
         {status === "converted" && (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
             Converted
+          </Badge>
+        )}
+        {status === "rejected" && (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+            Rejected
           </Badge>
         )}
       </div>
@@ -99,13 +116,47 @@ export function FactoryTicketCard({
             )}
             
             {status === "accepted" && (
-              <Button 
-                size="sm" 
-                onClick={onMarkConverted}
-                className="bg-charity-accent hover:bg-charity-dark text-white"
-              >
-                <Recycle className="h-4 w-4 mr-1" /> Mark as Converted
-              </Button>
+              <div className="opacity-100 transition-opacity duration-200">
+                <button
+                  onClick={onMarkConverted}
+                  style={{
+                    backgroundColor: "#28a745",
+                    color: "#fff",
+                    border: "1px solid #28a745",
+                    padding: "6px 12px",
+                    fontSize: "14px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    opacity: 1,
+                    visibility: "visible"
+                  }}
+                >
+                  <Check className="h-4 w-4 mr-1" /> Accept Request
+                </button>
+              </div>
+            )}
+            
+            {status === "accepted" && onRejectConversion && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <button
+                  onClick={onRejectConversion}
+                  style={{
+                    backgroundColor: "#dc3545",
+                    color: "#fff",
+                    border: "1px solid #dc3545",
+                    padding: "6px 12px",
+                    fontSize: "14px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer"
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" /> Reject Request
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -76,15 +76,75 @@ export default function FactoryTicketDetail() {
       return;
     }
 
-    const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-    const foundTicket = loadedTickets.find((t: FoodTicket) => t.id === ticketId);
+    const loadTicketData = async () => {
+      try {
+        // First try to load from Supabase
+        if (supabase) {
+          // Get the food ticket
+          const { data: ticketData, error: ticketError } = await supabase
+            .from("food_tickets")
+            .select("*")
+            .eq("id", ticketId)
+            .single();
 
-    if (!foundTicket) {
-      navigate("/factory");
-      return;
-    }
+          if (ticketError) {
+            console.error("Error loading ticket from Supabase:", ticketError);
+          } else if (ticketData) {
+            console.log("Loaded ticket from Supabase:", ticketData);
+            
+            // Convert snake_case to camelCase for frontend use
+            const camelCaseTicket = Object.keys(ticketData).reduce((acc, key) => {
+              const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              return { ...acc, [camelKey]: ticketData[key] };
+            }, {});
+            
+            setTicket(camelCaseTicket as FoodTicket);
+            
+            // Also check factory_requests table for this ticket
+            const { data: requestData, error: requestError } = await supabase
+              .from("factory_requests")
+              .select("*")
+              .eq("ticket_id", ticketId)
+              .order('request_date', { ascending: false })
+              .limit(1);
+              
+            if (requestError) {
+              console.error("Error loading factory request:", requestError);
+            } else if (requestData && requestData.length > 0) {
+              console.log("Found factory request for this ticket:", requestData[0]);
+              
+              // Update ticket with factory request data if needed
+              if (requestData[0].conversion_status && !(camelCaseTicket as FoodTicket).conversionStatus) {
+                setTicket(prev => prev ? {
+                  ...prev,
+                  conversionStatus: requestData[0].conversion_status
+                } : null);
+              }
+            } else {
+              console.log("No factory request found for this ticket");
+            }
+            
+            return; // Successfully loaded from Supabase
+          }
+        }
+        
+        // Fallback to localStorage if Supabase load failed
+        const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
+        const foundTicket = loadedTickets.find((t: FoodTicket) => t.id === ticketId);
 
-    setTicket(foundTicket);
+        if (!foundTicket) {
+          navigate("/factory");
+          return;
+        }
+
+        setTicket(foundTicket);
+      } catch (error) {
+        console.error("Error loading ticket data:", error);
+        toast.error("Failed to load ticket details");
+      }
+    };
+
+    loadTicketData();
   }, [ticketId, navigate]);
 
   const handleAccept = () => {
@@ -107,9 +167,7 @@ export default function FactoryTicketDetail() {
 
     try {
       console.log("Attempting to accept ticket with ID:", ticketId);
-      console.log("Ticket expiry date:", ticket.expiryDate);
-      console.log("Is expired:", isTicketExpired(ticket.expiryDate));
-
+      
       // Check if we have a valid Supabase client
       if (!supabase) {
         console.error("Supabase client is not initialized");
@@ -117,72 +175,8 @@ export default function FactoryTicketDetail() {
         return;
       }
 
-      // First check if the ticket exists in Supabase
+      // First update the food ticket status
       try {
-        const { data: existingTicket, error: fetchError } = await supabase
-          .from("food_tickets")
-          .select("*")
-          .eq("id", ticketId)
-          .single();
-
-        if (fetchError) {
-          console.error("Error fetching ticket:", fetchError);
-
-          // If the ticket doesn't exist in Supabase yet, let's create it
-          if (fetchError.code === "PGRST116") {
-            console.log("Ticket not found in database, creating it first");
-
-            // Create the ticket in Supabase with all required fields
-            const { data: newTicket, error: createError } = await supabase
-              .from("food_tickets")
-              .insert([{
-                id: ticketId,
-                food_type: ticket.foodType === 'expiry' ? 'expiry' : ticket.foodType,
-                category: ticket.category,
-                weight: ticket.weight,
-                pieces: ticket.pieces || null,
-                organization_id: ticket.organizationId,
-                organization_name: ticket.organizationName,
-                status: "pending",
-                expiry_date: ticket.expiryDate,
-                pickup_location: ticket.pickupLocation || "Not specified",
-                preferred_pickup_from: ticket.preferredPickupFrom || "09:00",
-                preferred_pickup_to: ticket.preferredPickupTo || "17:00",
-                notes: ticket.notes || null,
-                delivery_capability: ticket.deliveryCapability || "factory-only",
-                is_expired: isTicketExpired(ticket.expiryDate),
-                created_at: ticket.createdAt || new Date().toISOString()
-              }])
-              .select();
-
-            if (createError) {
-              console.error("Error creating ticket:", createError);
-              toast.error(`Failed to create ticket: ${createError.message}`);
-              return;
-            }
-
-            console.log("Successfully created ticket:", newTicket);
-          } else {
-            toast.error(`Failed to find ticket: ${fetchError.message}`);
-            return;
-          }
-        } else {
-          console.log("Found existing ticket:", existingTicket);
-        }
-      } catch (error) {
-        console.error("Error in ticket existence check:", error);
-        toast.error("Failed to verify ticket");
-        return;
-      }
-
-      // Now update the ticket
-      try {
-        console.log("Updating ticket with data:", {
-          status: "accepted",
-          factory_id: factory.id,
-          factory_name: factory.name
-        });
-
         const { data, error } = await supabase
           .from("food_tickets")
           .update({
@@ -199,14 +193,14 @@ export default function FactoryTicketDetail() {
           return;
         }
 
-        console.log("Update successful, response:", data);
+        console.log("Food ticket update successful, response:", data);
       } catch (error) {
         console.error("Error in update operation:", error);
         toast.error("Failed to update ticket status");
         return;
       }
 
-      // Create factory request record
+      // Create factory request record with proper error handling
       try {
         console.log("Creating factory request record");
         const factoryRequestData = {
@@ -215,46 +209,32 @@ export default function FactoryTicketDetail() {
           factoryName: factory.name,
           organizationId: ticket.organizationId,
           organizationName: ticket.organizationName,
-          foodType: ticket.foodType,
-          weight: ticket.weight,
+          foodType: ticket.foodType || 'expiry',
+          weight: ticket.weight || 0,
           status: 'accepted' as const,
           notes: `Accepted via factory dashboard. Delivery method: ${deliveryMethod}`
         };
 
+        console.log("Factory request data:", factoryRequestData);
         const factoryRequest = await createFactoryRequest(factoryRequestData);
         console.log("Factory request created successfully:", factoryRequest);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error creating factory request:", error);
-        // Don't fail the whole operation if factory request creation fails
-        toast.error("Warning: Factory request record could not be created");
+        toast.error(`Warning: Factory request record could not be created: ${error.message}`);
       }
 
-      // Update local state
-      try {
-        const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-        const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-          if (t.id === ticketId) {
-            return {
-              ...t,
-              status: "accepted",
-              factoryId: factory.id,
-              factoryName: factory.name
-            };
-          }
-          return t;
-        });
-
-        localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-
-        const updatedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-        setTicket(updatedTicket);
-        setShowDeliverySelect(false);
-      } catch (error) {
-        console.error("Error updating local state:", error);
-        // Continue execution even if local state update fails
-      }
-
+      // Update local state and show success message
       toast.success("Request accepted successfully");
+      setShowDeliverySelect(false);
+      
+      // Update the local ticket state
+      setTicket({
+        ...ticket,
+        status: "accepted",
+        factoryId: factory.id,
+        factoryName: factory.name
+      });
+      
     } catch (error: any) {
       console.error("Error in accept process:", error);
       toast.error(`Failed to accept request: ${error.message || "Unknown error"}`);
@@ -278,8 +258,8 @@ export default function FactoryTicketDetail() {
         return;
       }
 
-      // Update in Supabase
-      const { error } = await supabase
+      // Update in Supabase food_tickets table
+      const { error: ticketError } = await supabase
         .from("food_tickets")
         .update({
           status: "declined",
@@ -287,53 +267,38 @@ export default function FactoryTicketDetail() {
         })
         .eq("id", ticketId);
 
-      if (error) {
-        console.error("Supabase update error:", error);
-        toast.error(`Failed to reject request: ${error.message}`);
+      if (ticketError) {
+        console.error("Supabase food_tickets update error:", ticketError);
+        toast.error(`Failed to reject request: ${ticketError.message}`);
         return;
       }
 
-      // Create factory request record for rejection
-      try {
-        console.log("Creating factory request record for rejection");
-        const factoryRequestData = {
-          ticketId: ticketId,
-          factoryId: factory.id,
-          factoryName: factory.name,
-          organizationId: ticket.organizationId,
-          organizationName: ticket.organizationName,
-          foodType: ticket.foodType,
-          weight: ticket.weight,
-          status: 'declined' as const,
-          notes: `Rejected via factory dashboard`
-        };
-
-        const factoryRequest = await createFactoryRequest(factoryRequestData);
-        console.log("Factory request rejection record created successfully:", factoryRequest);
-      } catch (error) {
-        console.error("Error creating factory request rejection record:", error);
-        // Don't fail the whole operation if factory request creation fails
-        toast.error("Warning: Factory request record could not be created");
-      }
-
-      // Update local state
-      try {
-        const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-        const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-          if (t.id === ticketId) {
-            return {
-              ...t,
-              status: "declined",
-              conversionStatus: "rejected"
-            };
+      // CRITICAL: Insert directly into factory_requests table
+      const { data: insertData, error: insertError } = await supabase
+        .from("factory_requests")
+        .insert([
+          {
+            ticket_id: ticketId,
+            factory_id: factory.id,
+            factory_name: factory.name,
+            organization_id: ticket.organizationId,
+            organization_name: ticket.organizationName,
+            food_type: ticket.foodType || 'expiry',
+            weight: ticket.weight || 0,
+            status: 'declined',
+            conversion_status: 'rejected',
+            notes: `Rejected via factory dashboard`,
+            request_date: new Date().toISOString()
           }
-          return t;
-        });
+        ])
+        .select();
 
-        localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
-      } catch (error) {
-        console.error("Error updating local state:", error);
-        // Continue execution even if local state update fails
+      if (insertError) {
+        console.error("CRITICAL ERROR - Failed to insert into factory_requests:", insertError);
+        toast.error(`Failed to record rejection in database: ${insertError.message}`);
+        // Continue execution - we've at least updated the food_tickets table
+      } else {
+        console.log("Successfully inserted rejection record into factory_requests:", insertData);
       }
 
       toast.info("Request rejected");
@@ -344,89 +309,104 @@ export default function FactoryTicketDetail() {
     }
   };
 
-  const handleMarkConverted = async () => {
+  const handleMarkConverted = async (status: 'converted' | 'rejected') => {
     if (!ticket || !ticketId) {
       console.error("Missing ticket or ticketId:", { ticket, ticketId });
-      toast.error("Failed to mark as converted: Missing ticket information");
+      toast.error(`Failed to mark as ${status}: Missing ticket information`);
       return;
     }
 
     try {
-      console.log("Marking ticket as converted:", ticketId);
+      console.log(`Marking ticket as ${status}:`, ticketId);
 
       // Update the food ticket conversion status in Supabase
       try {
         const { error } = await supabase
           .from("food_tickets")
           .update({
-            conversion_status: "converted"
+            conversion_status: status
           })
           .eq("id", ticketId);
 
         if (error) {
-          console.error("Error updating ticket conversion status:", error);
+          console.error(`Error updating ticket conversion status to ${status}:`, error);
           toast.error(`Failed to update conversion status: ${error.message}`);
           return;
         }
       } catch (error) {
-        console.error("Error in ticket conversion update:", error);
-        toast.error("Failed to update ticket conversion status");
+        console.error(`Error in ticket conversion update to ${status}:`, error);
+        toast.error(`Failed to update ticket conversion status to ${status}`);
         return;
       }
 
-      // Update the factory request record
-      try {
-        console.log("Finding and updating factory request record");
+      // Check if a factory request already exists for this ticket
+      const { data: existingRequests, error: fetchError } = await supabase
+        .from("factory_requests")
+        .select("*")
+        .eq("ticket_id", ticketId)
+        .eq("factory_id", factory.id);
 
-        // First, find the factory request for this ticket
-        const factoryRequests = await getFactoryRequests({
-          ticketId: ticketId,
-          factoryId: factory.id,
-          status: 'accepted'
-        });
-
-        if (factoryRequests && factoryRequests.length > 0) {
-          const factoryRequest = factoryRequests[0];
-          console.log("Found factory request:", factoryRequest);
-
-          // Update the factory request conversion status
-          await updateFactoryRequest(factoryRequest.id, {
-            conversionStatus: 'converted',
-            conversionDate: new Date().toISOString(),
-            notes: factoryRequest.notes ? `${factoryRequest.notes}\n\nMarked as converted via factory dashboard` : 'Marked as converted via factory dashboard'
-          });
-
-          console.log("Factory request updated successfully");
-        } else {
-          console.warn("No factory request found for this ticket");
-        }
-      } catch (error) {
-        console.error("Error updating factory request:", error);
-        // Don't fail the whole operation if factory request update fails
-        toast.error("Warning: Factory request record could not be updated");
+      if (fetchError) {
+        console.error("Error checking for existing factory requests:", fetchError);
       }
 
-      // Update local state
-      const loadedTickets = JSON.parse(localStorage.getItem("foodTickets") || "[]");
-      const updatedTickets = loadedTickets.map((t: FoodTicket) => {
-        if (t.id === ticketId) {
-          return {
-            ...t,
-            conversionStatus: "converted"
-          };
+      if (existingRequests && existingRequests.length > 0) {
+        // Update existing factory request
+        console.log("Updating existing factory request:", existingRequests[0].id);
+        const { error: updateError } = await supabase
+          .from("factory_requests")
+          .update({
+            conversion_status: status,
+            conversion_date: new Date().toISOString(),
+            notes: existingRequests[0].notes 
+              ? `${existingRequests[0].notes}\n\nMarked as ${status} via factory dashboard` 
+              : `Marked as ${status} via factory dashboard`
+          })
+          .eq("id", existingRequests[0].id);
+
+        if (updateError) {
+          console.error("Error updating factory request:", updateError);
+          toast.error(`Warning: Factory request record could not be updated: ${updateError.message}`);
+        } else {
+          console.log("Factory request updated successfully");
         }
-        return t;
-      });
+      } else {
+        // Insert new factory request
+        console.log("No existing factory request found, creating new one");
+        const { data: insertData, error: insertError } = await supabase
+          .from("factory_requests")
+          .insert([
+            {
+              ticket_id: ticketId,
+              factory_id: factory.id,
+              factory_name: factory.name,
+              organization_id: ticket.organizationId,
+              organization_name: ticket.organizationName,
+              food_type: ticket.foodType || 'expiry',
+              weight: ticket.weight || 0,
+              status: 'accepted',
+              conversion_status: status,
+              conversion_date: new Date().toISOString(),
+              notes: `Marked as ${status} via factory dashboard`,
+              request_date: new Date().toISOString()
+            }
+          ])
+          .select();
 
-      localStorage.setItem("foodTickets", JSON.stringify(updatedTickets));
+        if (insertError) {
+          console.error("Error creating new factory request:", insertError);
+          toast.error(`Warning: Factory request record could not be created: ${insertError.message}`);
+        } else {
+          console.log("New factory request created successfully:", insertData);
+        }
+      }
 
-      const updatedTicket = updatedTickets.find((t: FoodTicket) => t.id === ticketId);
-      setTicket(updatedTicket);
-
-      toast.success("Food marked as converted successfully");
+      toast.success(status === 'converted' ? 
+        "Food marked as converted successfully" : 
+        "Food conversion rejected successfully");
     } catch (error: any) {
-      console.error("Error in mark converted process:", error);
-      toast.error(`Failed to mark as converted: ${error.message || "Unknown error"}`);
+      console.error(`Error in mark ${status} process:`, error);
+      toast.error(`Failed to mark as ${status}: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -556,19 +536,43 @@ export default function FactoryTicketDetail() {
             </>
           )}
 
-          {ticket.status === "accepted" && ticket.conversionStatus !== "converted" && (
-            <Button
-              onClick={handleMarkConverted}
-              className="bg-charity-accent hover:bg-charity-dark text-white"
-            >
-              <Recycle className="h-4 w-4 mr-2" /> Mark as Converted
-            </Button>
+          {ticket.status === "accepted" && ticket.conversionStatus !== "converted" && ticket.conversionStatus !== "rejected" && (
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => handleMarkConverted('converted')}
+                className="bg-charity-accent hover:bg-charity-dark text-white"
+                style={{
+                  backgroundColor: "#28a745",
+                  color: "#fff",
+                  border: "1px solid #28a745",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: 1
+                }}
+              >
+                <Check className="h-4 w-4 mr-2" /> Accept Request
+              </Button>
+              <Button
+                onClick={() => handleMarkConverted('rejected')}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <X className="h-4 w-4 mr-2" /> Reject Request
+              </Button>
+            </div>
           )}
 
           {ticket.conversionStatus === "converted" && (
             <div className="bg-green-100 border border-green-300 rounded-md p-4 text-center">
               <Recycle className="h-6 w-6 mx-auto mb-2 text-green-600" />
               <p className="text-green-800 font-medium">This food has been successfully converted</p>
+            </div>
+          )}
+
+          {ticket.conversionStatus === "rejected" && (
+            <div className="bg-red-100 border border-red-300 rounded-md p-4 text-center">
+              <X className="h-6 w-6 mx-auto mb-2 text-red-600" />
+              <p className="text-red-800 font-medium">This food conversion was rejected</p>
             </div>
           )}
         </div>
