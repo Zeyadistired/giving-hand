@@ -98,7 +98,7 @@ function CharityHomeContent() {
         return null;
       }
 
-      if (localUser.type !== 'charity') {
+      if (localUser.type !== 'charity' && localUser.type !== 'admin') {
         clearUserSession();
         navigate("/login", { replace: true });
         return null;
@@ -122,7 +122,7 @@ function CharityHomeContent() {
       setError(null);
 
       const serverUser = await getCurrentUser();
-      if (!serverUser || serverUser.type !== 'charity') {
+      if (!serverUser || (serverUser.type !== 'charity' && serverUser.type !== 'admin')) {
         throw new Error('Invalid session');
       }
 
